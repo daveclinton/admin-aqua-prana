@@ -16,9 +16,15 @@ export async function POST(request: NextRequest) {
 
   const json = await res.json()
 
-  // If 2FA is required, the backend returns 403 with a challenge_id — pass it through as 200
-  if (json.data?.challenge_id) {
-    return NextResponse.json(json)
+  // If 2FA is required, the backend returns 403 with challenge_id in error.details
+  if (json.error?.code === "TWO_FACTOR_REQUIRED" && json.error?.details?.challenge_id) {
+    return NextResponse.json({
+      success: true,
+      data: {
+        challenge_id: json.error.details.challenge_id,
+        channel: json.error.details.channel ?? "email",
+      },
+    })
   }
 
   if (!res.ok) {
