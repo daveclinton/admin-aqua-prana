@@ -1,13 +1,17 @@
 import type { Metadata } from "next"
 import { PAGE_METADATA } from "@/lib/constants/app"
 
-const page = PAGE_METADATA["/settings/notifications"]
+const page = PAGE_METADATA["/overview"]
 
 export const metadata: Metadata = {
   title: page.title,
   description: page.description,
 }
 
-export default function NotificationSettingsPage() {
-  return <div>Notification Settings</div>
+export default function OverviewLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return children
 }
