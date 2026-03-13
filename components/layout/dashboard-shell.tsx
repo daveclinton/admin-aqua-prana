@@ -1,21 +1,77 @@
 "use client"
 
+import { Upload } from "lucide-react"
+import { usePathname } from "next/navigation"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
-import { APP_NAME, APP_DESCRIPTION } from "@/lib/constants/app"
+import { Button } from "@/components/ui/button"
+import { PAGE_METADATA } from "@/lib/constants/app"
+import { useCurrentUser } from "@/features/auth/hooks/use-current-user"
+
+function getGreeting() {
+  const hour = new Date().getHours()
+  if (hour < 12) return "Good morning"
+  if (hour < 17) return "Good afternoon"
+  return "Good evening"
+}
+
+function usePageHeader() {
+  const pathname = usePathname()
+  const { data: user } = useCurrentUser()
+  const page = PAGE_METADATA[pathname as keyof typeof PAGE_METADATA]
+
+  if (pathname === "/overview") {
+    const firstName = user?.first_name || user?.name?.split(" ")[0] || "Admin"
+    return {
+      eyebrow: page?.eyebrow,
+      title: `${getGreeting()}, ${firstName}`,
+      description: page?.description,
+      showExport: false,
+    }
+  }
+
+  return {
+    eyebrow: page?.eyebrow,
+    title: page?.title ?? "",
+    description: page?.description,
+    showExport: page?.showExport ?? false,
+  }
+}
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
+  const { eyebrow, title, description, showExport } = usePageHeader()
+
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <span className="text-sm font-medium">
-            {APP_NAME} {APP_DESCRIPTION}
-          </span>
+        <header className="sticky top-0 z-30 flex shrink-0 items-start justify-between gap-4 border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="flex items-start gap-2">
+            <SidebarTrigger className="mt-0.5 -ml-1" />
+            <Separator orientation="vertical" className="mr-2 h-8" />
+            <div className="space-y-0.5">
+              {eyebrow ? (
+                <p className="text-[0.625rem] font-semibold tracking-[0.24em] text-primary uppercase">
+                  {eyebrow}
+                </p>
+              ) : null}
+              <h1 className="text-sm font-semibold tracking-tight">
+                {title}
+              </h1>
+              {description ? (
+                <p className="text-xs text-muted-foreground">
+                  {description}
+                </p>
+              ) : null}
+            </div>
+          </div>
+          {showExport ? (
+            <Button variant="outline" size="sm" className="shrink-0">
+              <Upload className="size-3.5" />
+              Export
+            </Button>
+          ) : null}
         </header>
         <main className="flex-1 p-4">{children}</main>
       </SidebarInset>

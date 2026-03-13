@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { PAGE_METADATA } from "@/lib/constants/app"
+import { FarmersTableClient } from "@/features/farmers/components/farmers-table-client"
 
 const page = PAGE_METADATA["/farmers"]
 
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 }
 
 export default function FarmersPage() {
-  return <div>Farmers</div>
+  return <FarmersTableClient />
 }

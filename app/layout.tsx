@@ -1,4 +1,5 @@
-import { Geist, Geist_Mono, Noto_Sans } from "next/font/google"
+import { Geist_Mono, Noto_Sans } from "next/font/google"
+import { NuqsAdapter } from "nuqs/adapters/next/app"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -27,10 +28,12 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          <QueryProvider>
-            <TooltipProvider>{children}</TooltipProvider>
-            <Toaster />
-          </QueryProvider>
+          <NuqsAdapter>
+            <QueryProvider>
+              <TooltipProvider>{children}</TooltipProvider>
+              <Toaster />
+            </QueryProvider>
+          </NuqsAdapter>
         </ThemeProvider>
       </body>
     </html>

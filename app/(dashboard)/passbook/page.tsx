@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { PAGE_METADATA } from "@/lib/constants/app"
+import { PassbookTableClient } from "@/features/passbook/components/passbook-table-client"
 
 const page = PAGE_METADATA["/passbook"]
 
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 }
 
 export default function PassbookPage() {
-  return <div>Passbook</div>
+  return <PassbookTableClient />
 }
