@@ -19,6 +19,7 @@ import {
   YAxis,
 } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { KpiCard } from "@/components/dashboard/kpi-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { queryKeys } from "@/lib/react-query/query-keys"
@@ -41,34 +42,45 @@ export function AquagptAnalytics() {
   const summary = data?.summary
   const daily = data?.daily ?? []
 
-  const kpis = [
+  const kpis: {
+    label: string
+    value: string
+    subtitle?: string
+    icon: typeof Bot
+    variant: "teal" | "green" | "amber" | "red"
+  }[] = [
     {
       label: "Total Chats",
       value: summary?.total_chats?.toLocaleString() ?? "-",
-      subValue: summary ? `${summary.chats_in_range.toLocaleString()} in range` : undefined,
+      subtitle: summary ? `${summary.chats_in_range.toLocaleString()} in range` : undefined,
       icon: Bot,
+      variant: "green",
     },
     {
       label: "Unique Users",
       value: summary?.unique_users?.toLocaleString() ?? "-",
-      subValue: summary ? `${summary.unique_users_in_range.toLocaleString()} in range` : undefined,
+      subtitle: summary ? `${summary.unique_users_in_range.toLocaleString()} in range` : undefined,
       icon: Users,
+      variant: "teal",
     },
     {
       label: "Total Tokens",
       value: summary?.total_tokens?.toLocaleString() ?? "-",
-      subValue: summary ? `${summary.tokens_in_range.toLocaleString()} in range` : undefined,
+      subtitle: summary ? `${summary.tokens_in_range.toLocaleString()} in range` : undefined,
       icon: Zap,
+      variant: "amber",
     },
     {
       label: "Avg Latency",
       value: summary ? `${Math.round(summary.avg_latency_ms)}ms` : "-",
       icon: Clock,
+      variant: "teal",
     },
     {
       label: "Errors",
       value: summary?.total_errors?.toLocaleString() ?? "-",
       icon: AlertTriangle,
+      variant: "red",
     },
   ]
 
@@ -90,32 +102,20 @@ export function AquagptAnalytics() {
 
       {/* KPI cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {kpis.map((kpi) => (
-          <Card key={kpi.label}>
-            <CardHeader className="flex flex-row items-center justify-between pb-0">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
-                {kpi.label}
-              </CardTitle>
-              <kpi.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="pt-2">
-              {isLoading ? (
-                <Skeleton className="h-7 w-20" />
-              ) : (
-                <>
-                  <p className="text-2xl font-semibold tracking-tight">
-                    {kpi.value}
-                  </p>
-                  {kpi.subValue && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {kpi.subValue}
-                    </p>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+        {isLoading
+          ? Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-[140px] rounded-2xl" />
+            ))
+          : kpis.map((kpi) => (
+              <KpiCard
+                key={kpi.label}
+                title={kpi.label}
+                value={kpi.value}
+                subtitle={kpi.subtitle}
+                icon={kpi.icon}
+                variant={kpi.variant}
+              />
+            ))}
       </div>
 
       {/* Chart */}

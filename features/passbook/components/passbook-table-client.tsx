@@ -11,7 +11,8 @@ import { useMemo, useState } from "react"
 import { useQueryStates } from "nuqs"
 import { DataTable } from "@/components/table/data-table"
 import { DataTableToolbar } from "@/components/table/data-table-toolbar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { KpiCard } from "@/components/dashboard/kpi-card"
+import { BookOpen, CheckSquare, Filter } from "lucide-react"
 import { getPassbookEntries } from "@/features/passbook/api"
 import { passbookColumns } from "@/features/passbook/tables/passbook-columns"
 import type { PassbookEntryRow } from "@/features/passbook/types"
@@ -127,41 +128,30 @@ export function PassbookTableClient() {
     },
   })
 
-  const metrics = useMemo(
-    () => [
-      {
-        label: "Total entries",
-        value: rowCount.toLocaleString(),
-      },
-      {
-        label: "Selected rows",
-        value: table.getFilteredSelectedRowModel().rows.length.toString(),
-      },
-      {
-        label: "Active filters",
-        value: queryState.globalFilter ? "1" : "0",
-      },
-    ],
-    [queryState.globalFilter, rowCount, table]
-  )
+  const selectedCount = table.getFilteredSelectedRowModel().rows.length
+  const filterCount = queryState.globalFilter ? 1 : 0
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-3">
-        {metrics.map((metric) => (
-          <Card key={metric.label}>
-            <CardHeader className="pb-0">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
-                {metric.label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-semibold tracking-tight">
-                {metric.value}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        <KpiCard
+          title="Total Entries"
+          value={rowCount.toLocaleString()}
+          icon={BookOpen}
+          variant="green"
+        />
+        <KpiCard
+          title="Selected Rows"
+          value={selectedCount.toString()}
+          icon={CheckSquare}
+          variant="teal"
+        />
+        <KpiCard
+          title="Active Filters"
+          value={filterCount.toString()}
+          icon={Filter}
+          variant="amber"
+        />
       </div>
 
       <section className="overflow-hidden rounded-2xl border bg-card shadow-xs shadow-black/5">

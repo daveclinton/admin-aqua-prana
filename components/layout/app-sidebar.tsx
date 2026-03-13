@@ -4,7 +4,6 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { sidebarNavigation } from "@/lib/constants/navigation"
 import { AppLogo } from "@/components/shared/app-logo"
-import { UserMenu } from "@/components/shared/user-menu"
 import {
   Sidebar,
   SidebarContent,
@@ -23,7 +22,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible="icon" className="[&_[data-slot=sidebar]>div]:bg-[linear-gradient(170deg,#1b3d27_0%,#162e20_55%,#0e2218_100%)]" {...props}>
       <SidebarHeader>
         <AppLogo />
       </SidebarHeader>
@@ -52,9 +51,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           </SidebarGroup>
         ))}
       </SidebarContent>
-      <SidebarFooter>
-        <UserMenu />
-      </SidebarFooter>
+      <SidebarFooter />
       <SidebarRail />
     </Sidebar>
   )

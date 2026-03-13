@@ -3,7 +3,7 @@
 import { Upload } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { AppSidebar } from "@/components/layout/app-sidebar"
-import { UserAvatar } from "@/components/shared/user-avatar"
+import { HeaderUserMenu } from "@/components/shared/header-user-menu"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
@@ -80,33 +80,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="sticky top-0 z-30 flex shrink-0 items-start justify-between gap-4 border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex items-start gap-2">
-            <SidebarTrigger className="mt-0.5 -ml-1" />
+        <header className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-4 border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-8" />
-            <div className="space-y-1">
-              {/* Breadcrumb */}
-              <Breadcrumb>
-                <BreadcrumbList>
-                  {breadcrumbs.map((crumb, i) => {
-                    const isLast = i === breadcrumbs.length - 1
-                    return (
-                      <BreadcrumbItem key={crumb.label}>
-                        {i > 0 && <BreadcrumbSeparator />}
-                        {isLast ? (
-                          <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-                        ) : (
-                          <BreadcrumbLink href={crumb.href}>
-                            {crumb.label}
-                          </BreadcrumbLink>
-                        )}
-                      </BreadcrumbItem>
-                    )
-                  })}
-                </BreadcrumbList>
-              </Breadcrumb>
-
-              {/* Title */}
+            <div>
               <h1 className="text-lg font-semibold tracking-tight">
                 {title}
               </h1>
@@ -117,22 +95,40 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               ) : null}
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-3">
             {showExport ? (
               <Button variant="outline" size="sm">
                 <Upload className="size-3.5" />
                 Export
               </Button>
             ) : null}
-            <UserAvatar
-              src={user?.image}
-              name={user?.name}
-              email={user?.email}
-              className="size-8"
-            />
+            <HeaderUserMenu />
           </div>
         </header>
-        <main className="flex-1 p-4">{children}</main>
+        <main className="flex-1 p-4">
+          {/* Breadcrumb */}
+          <Breadcrumb className="mb-4">
+            <BreadcrumbList>
+              {breadcrumbs.map((crumb, i) => {
+                const isLast = i === breadcrumbs.length - 1
+                return (
+                  <BreadcrumbItem key={crumb.label}>
+                    {i > 0 && <BreadcrumbSeparator />}
+                    {isLast ? (
+                      <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                    ) : (
+                      <BreadcrumbLink href={crumb.href}>
+                        {crumb.label}
+                      </BreadcrumbLink>
+                    )}
+                  </BreadcrumbItem>
+                )
+              })}
+            </BreadcrumbList>
+          </Breadcrumb>
+
+          {children}
+        </main>
       </SidebarInset>
     </SidebarProvider>
   )
