@@ -161,3 +161,60 @@ Here's the full picture from the aqua-prana-website backend:
   4. middleware.ts — protect dashboard routes, auto-refresh tokens
 
 ✻ Baked for 2m 10s
+
+Build passes. Here's the full auth integration summary:
+
+  API functions (features/auth/api/)
+
+  ┌─────────────────────┬────────────────────────────────────────────┐
+  │        File         │                 Functions                  │
+  ├─────────────────────┼────────────────────────────────────────────┤
+  │ get-current-user.ts │ getCurrentUser()                           │
+  ├─────────────────────┼────────────────────────────────────────────┤
+  │ login.ts            │ login(), verify2FA(), logout()             │
+  ├─────────────────────┼────────────────────────────────────────────┤
+  │ update-profile.ts   │ updateProfile()                            │
+  ├─────────────────────┼────────────────────────────────────────────┤
+  │ password.ts         │ changePassword(), forgotPassword(),        │
+  │                     │ verifyResetCode(), resetPassword()         │
+  ├─────────────────────┼────────────────────────────────────────────┤
+  │ two-factor.ts       │ toggle2FA()                                │
+  └─────────────────────┴────────────────────────────────────────────┘
+
+  Hooks (features/auth/hooks/)
+
+  ┌──────────────────────┬───────────────────────────────────────────┐
+  │         Hook         │               What it does                │
+  ├──────────────────────┼───────────────────────────────────────────┤
+  │ useCurrentUser()     │ Fetches admin profile, 10min stale        │
+  ├──────────────────────┼───────────────────────────────────────────┤
+  │ useLogin()           │ Login mutation, redirects to /overview    │
+  ├──────────────────────┼───────────────────────────────────────────┤
+  │ useLogout()          │ Logout mutation, clears cache, redirects  │
+  │                      │ to /login                                 │
+  ├──────────────────────┼───────────────────────────────────────────┤
+  │ useUpdateProfile()   │ Updates profile, sets cache directly (no  │
+  │                      │ refetch)                                  │
+  ├──────────────────────┼───────────────────────────────────────────┤
+  │ useChangePassword()  │ Change password mutation                  │
+  ├──────────────────────┼───────────────────────────────────────────┤
+  │ useToggle2FA()       │ Toggle 2FA, updates cached user           │
+  ├──────────────────────┼───────────────────────────────────────────┤
+  │ useForgotPassword()  │ Forgot password mutation                  │
+  ├──────────────────────┼───────────────────────────────────────────┤
+  │ useVerifyResetCode() │ Verify OTP code mutation                  │
+  ├──────────────────────┼───────────────────────────────────────────┤
+  │ useResetPassword()   │ Reset password mutation                   │
+  └──────────────────────┴───────────────────────────────────────────┘
+
+  All hooks go through the catch-all proxy (/api/proxy/v1/...) which
+  attaches the Bearer token from httpOnly cookies automatically. Ready
+  for UI integration.
+
+✻ Baked for 1m 57s
+
+────────────────────────────────────────────────────────────────────────
+❯                                           
+────────────────────────────────────────────────────────────────────────
+  ⏵⏵ accept edits on (shift+tab to cycle)
+                                                                        
