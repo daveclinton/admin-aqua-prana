@@ -1,13 +1,5 @@
-import type { Metadata } from "next"
-import { PAGE_METADATA } from "@/lib/constants/app"
-
-const page = PAGE_METADATA["/settings"]
-
-export const metadata: Metadata = {
-  title: page.title,
-  description: page.description,
-}
+import { redirect } from "next/navigation"
 
 export default function SettingsPage() {
-  return <div>Settings</div>
+  redirect("/settings/profile")
 }

@@ -1,8 +1,9 @@
 "use client"
 
-import { ChevronsUpDown, LogOut, Settings, User } from "lucide-react"
+import { ChevronsUpDown, LogOut, Settings } from "lucide-react"
 import { useCurrentUser } from "@/features/auth/hooks/use-current-user"
 import { useLogout } from "@/features/auth/hooks/use-logout"
+import { UserAvatar } from "@/components/shared/user-avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,9 +56,12 @@ export function UserMenu() {
               size="lg"
               className="data-open:bg-sidebar-accent data-open:text-sidebar-accent-foreground"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-accent-foreground">
-                <User className="size-4" />
-              </div>
+              <UserAvatar
+                src={user?.image}
+                name={displayName}
+                email={user?.email}
+                className="rounded-lg"
+              />
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">{displayName}</span>
                 {user?.email && (
@@ -77,9 +81,12 @@ export function UserMenu() {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-accent-foreground">
-                  <User className="size-4" />
-                </div>
+                <UserAvatar
+                  src={user?.image}
+                  name={displayName}
+                  email={user?.email}
+                  className="rounded-lg"
+                />
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{displayName}</span>
                   {user?.email && (

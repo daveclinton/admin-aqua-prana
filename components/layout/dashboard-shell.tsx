@@ -3,6 +3,7 @@
 import { Upload } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { AppSidebar } from "@/components/layout/app-sidebar"
+import { UserAvatar } from "@/components/shared/user-avatar"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
@@ -28,6 +29,7 @@ function usePageHeader() {
       title: `${getGreeting()}, ${firstName}`,
       description: page?.description,
       showExport: false,
+      user,
     }
   }
 
@@ -36,11 +38,12 @@ function usePageHeader() {
     title: page?.title ?? "",
     description: page?.description,
     showExport: page?.showExport ?? false,
+    user,
   }
 }
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
-  const { eyebrow, title, description, showExport } = usePageHeader()
+  const { eyebrow, title, description, showExport, user } = usePageHeader()
 
   return (
     <SidebarProvider>
@@ -66,12 +69,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               ) : null}
             </div>
           </div>
-          {showExport ? (
-            <Button variant="outline" size="sm" className="shrink-0">
-              <Upload className="size-3.5" />
-              Export
-            </Button>
-          ) : null}
+          <div className="flex shrink-0 items-center gap-2">
+            {showExport ? (
+              <Button variant="outline" size="sm">
+                <Upload className="size-3.5" />
+                Export
+              </Button>
+            ) : null}
+            <UserAvatar
+              src={user?.image}
+              name={user?.name}
+              email={user?.email}
+              className="size-8"
+            />
+          </div>
         </header>
         <main className="flex-1 p-4">{children}</main>
       </SidebarInset>

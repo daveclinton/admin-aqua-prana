@@ -1,13 +1,5 @@
-import type { Metadata } from "next"
-import { PAGE_METADATA } from "@/lib/constants/app"
-
-const page = PAGE_METADATA["/settings/notifications"]
-
-export const metadata: Metadata = {
-  title: page.title,
-  description: page.description,
-}
+import { NotificationSettingsClient } from "@/features/settings/components/notification-settings-client"
 
 export default function NotificationSettingsPage() {
-  return <div>Notification Settings</div>
+  return <NotificationSettingsClient />
 }

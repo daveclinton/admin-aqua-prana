@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PasswordField } from "@/components/auth/password-field"
+import { OtpVerifyForm } from "@/components/auth/otp-verify-form"
 import { useLogin } from "@/features/auth/hooks/use-login"
 import { Loader2 } from "lucide-react"
 
@@ -17,14 +18,29 @@ export function LoginForm() {
   const { register, handleSubmit } = useForm<LoginFormValues>()
   const loginMutation = useLogin()
   const [error, setError] = useState<string | null>(null)
+  const [challengeId, setChallengeId] = useState<string | null>(null)
 
   const onSubmit = (data: LoginFormValues) => {
     setError(null)
     loginMutation.mutate(data, {
+      onSuccess: (res) => {
+        if ("data" in res && "challenge_id" in res.data) {
+          setChallengeId(res.data.challenge_id)
+        }
+      },
       onError: (err) => {
         setError(err.message)
       },
     })
+  }
+
+  if (challengeId) {
+    return (
+      <OtpVerifyForm
+        challengeId={challengeId}
+        onBack={() => setChallengeId(null)}
+      />
+    )
   }
 
   return (

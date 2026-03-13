@@ -16,13 +16,13 @@ export async function POST(request: NextRequest) {
 
   const json = await res.json()
 
-  if (!res.ok) {
-    return NextResponse.json(json, { status: res.status })
-  }
-
-  // If 2FA is required, return the challenge — no tokens yet
+  // If 2FA is required, the backend returns 403 with a challenge_id — pass it through as 200
   if (json.data?.challenge_id) {
     return NextResponse.json(json)
+  }
+
+  if (!res.ok) {
+    return NextResponse.json(json, { status: res.status })
   }
 
   // Verify the user actually has admin role
