@@ -10,13 +10,21 @@ import type { DataTableQueryResult } from "@/lib/table/table-types"
 
 /* ── Analytics ── */
 
+type AquagptAnalyticsRaw = {
+  summary: AquagptAnalytics["summary"]
+  daily_usage: AquagptAnalytics["daily"]
+}
+
 export async function getAquagptAnalytics(
   range: string = "7d"
 ): Promise<AquagptAnalytics> {
-  const res = await api<ApiSuccessResponse<AquagptAnalytics>>(
+  const res = await api<ApiSuccessResponse<AquagptAnalyticsRaw>>(
     `/v1/admin/analytics/aquagpt?range=${range}`
   )
-  return res.data
+  return {
+    summary: res.data.summary,
+    daily: res.data.daily_usage,
+  }
 }
 
 /* ── Usage logs ── */

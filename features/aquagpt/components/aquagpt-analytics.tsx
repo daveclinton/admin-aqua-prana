@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { useQueryState, parseAsStringLiteral } from "nuqs"
 import {
   Bot,
   Users,
@@ -32,7 +32,10 @@ const ranges = [
 ]
 
 export function AquagptAnalytics() {
-  const [range, setRange] = useState("7d")
+  const [range, setRange] = useQueryState(
+    "range",
+    parseAsStringLiteral(["7d", "30d", "90d"] as const).withDefault("7d")
+  )
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.analytics.aquagpt(range),
@@ -89,7 +92,7 @@ export function AquagptAnalytics() {
       {/* Range selector */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-muted-foreground">Analytics</h3>
-        <Tabs value={range} onValueChange={setRange}>
+        <Tabs value={range} onValueChange={(v) => void setRange(v as "7d" | "30d" | "90d")}>
           <TabsList className="h-8">
             {ranges.map((r) => (
               <TabsTrigger key={r.value} value={r.value} className="text-xs px-3">
