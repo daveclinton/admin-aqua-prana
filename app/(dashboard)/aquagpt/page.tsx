@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { PAGE_METADATA } from "@/lib/constants/app"
+import { AquagptClient } from "@/features/aquagpt/components/aquagpt-client"
 
 const page = PAGE_METADATA["/aquagpt"]
 
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 }
 
 export default function AquaGptPage() {
-  return <div>AquaGPT</div>
+  return <AquagptClient />
 }
