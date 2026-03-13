@@ -2,8 +2,7 @@
 
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Loader2, Lock } from "lucide-react"
 import { PasswordField } from "@/components/auth/password-field"
 import { useResetPassword } from "@/features/auth/hooks/use-reset-password"
 
@@ -48,20 +47,26 @@ export function ResetPasswordForm() {
   if (!resetToken) {
     return (
       <div className="space-y-4 text-center">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-white/45">
           Invalid or missing reset token. Please request a new password reset.
         </p>
-        <Button variant="outline" onClick={() => router.push("/forgot-password")}>
+        <button
+          onClick={() => router.push("/forgot-password")}
+          className="rounded-[10px] border-[1.5px] border-white/[0.12] bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white/75 transition-all hover:bg-white/[0.13]"
+        >
           Request new code
-        </Button>
+        </button>
       </div>
     )
   }
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-4">
-      <div className="grid gap-1.5">
-        <label htmlFor="new-password" className="text-xs font-medium">
+      <div className="grid gap-[7px]">
+        <label
+          htmlFor="new-password"
+          className="text-[11.5px] font-semibold uppercase tracking-wider text-white/55"
+        >
           New password
         </label>
         <PasswordField
@@ -71,11 +76,17 @@ export function ResetPasswordForm() {
           required
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
+          icon={
+            <Lock className="pointer-events-none absolute left-[13px] top-1/2 size-[15px] -translate-y-1/2 text-white/30" />
+          }
         />
       </div>
 
-      <div className="grid gap-1.5">
-        <label htmlFor="confirm-password" className="text-xs font-medium">
+      <div className="grid gap-[7px]">
+        <label
+          htmlFor="confirm-password"
+          className="text-[11.5px] font-semibold uppercase tracking-wider text-white/55"
+        >
           Confirm password
         </label>
         <PasswordField
@@ -85,24 +96,29 @@ export function ResetPasswordForm() {
           required
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
+          icon={
+            <Lock className="pointer-events-none absolute left-[13px] top-1/2 size-[15px] -translate-y-1/2 text-white/30" />
+          }
         />
       </div>
 
       {error && (
-        <p className="text-xs text-destructive">{error}</p>
+        <div className="rounded-[9px] border border-red-400/40 bg-red-500/15 px-3.5 py-2.5 text-[12.5px] text-red-300">
+          {error}
+        </div>
       )}
 
-      <Button
+      <button
         type="submit"
-        size="lg"
-        className="w-full"
         disabled={resetMutation.isPending}
+        className="w-full rounded-[10px] bg-gradient-to-br from-[#2d8c5a] to-[#3cb87a] px-4 py-3.5 text-sm font-bold tracking-wide text-white shadow-[0_6px_20px_rgba(45,140,90,0.45)] transition-all hover:opacity-90 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
       >
-        {resetMutation.isPending && (
-          <Loader2 className="animate-spin" />
+        {resetMutation.isPending ? (
+          <Loader2 className="mx-auto size-4 animate-spin" />
+        ) : (
+          "Reset password"
         )}
-        Reset password
-      </Button>
+      </button>
     </form>
   )
 }

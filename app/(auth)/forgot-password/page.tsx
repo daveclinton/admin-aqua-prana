@@ -12,17 +12,19 @@ export default function ForgotPasswordPage() {
   return (
     <>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Forgot password?</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="text-2xl font-extrabold tracking-tight text-white">
+          Forgot password?
+        </h1>
+        <p className="mt-1.5 text-[13px] text-white/45">
           Enter your email and we&apos;ll send you a reset code.
         </p>
       </div>
       <ForgotPasswordForm />
-      <p className="mt-6 text-center text-xs text-muted-foreground">
+      <p className="mt-6 text-center text-xs text-white/40">
         Remember your password?{" "}
         <Link
           href="/login"
-          className="text-primary underline-offset-4 hover:underline"
+          className="font-medium text-emerald-300/70 underline-offset-4 hover:underline"
         >
           Sign in
         </Link>

@@ -9,6 +9,9 @@ export interface OverviewStats {
   active_forum_posts: number
   chats_7d: number
   audit_events_24h: number
+  total_ponds: number
+  total_farmers: number
+  total_partners: number
 }
 
 export interface TrendPoint {

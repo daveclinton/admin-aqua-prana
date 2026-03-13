@@ -1,5 +1,4 @@
 import type { LucideIcon } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 type KpiCardProps = {
@@ -9,6 +8,45 @@ type KpiCardProps = {
   icon: LucideIcon
   trend?: string
   className?: string
+  variant?: "default" | "teal" | "green" | "amber" | "red"
+}
+
+const variantStyles = {
+  default: {
+    card: "bg-card text-card-foreground border",
+    icon: "bg-muted text-muted-foreground",
+    trend: "bg-primary/15 text-primary",
+    title: "text-muted-foreground",
+    value: "text-foreground",
+  },
+  teal: {
+    card: "bg-gradient-to-br from-teal-600 to-teal-700 text-white border-0",
+    icon: "bg-white/15 text-white",
+    trend: "bg-white/20 text-white",
+    title: "text-white/80",
+    value: "text-white",
+  },
+  green: {
+    card: "bg-gradient-to-br from-emerald-600 to-emerald-700 text-white border-0",
+    icon: "bg-white/15 text-white",
+    trend: "bg-white/20 text-white",
+    title: "text-white/80",
+    value: "text-white",
+  },
+  amber: {
+    card: "bg-gradient-to-br from-amber-500 to-amber-600 text-white border-0",
+    icon: "bg-white/15 text-white",
+    trend: "bg-white/20 text-white",
+    title: "text-white/80",
+    value: "text-white",
+  },
+  red: {
+    card: "bg-gradient-to-br from-red-500 to-red-600 text-white border-0",
+    icon: "bg-white/15 text-white",
+    trend: "bg-white/20 text-white",
+    title: "text-white/80",
+    value: "text-white",
+  },
 }
 
 export function KpiCard({
@@ -18,27 +56,44 @@ export function KpiCard({
   icon: Icon,
   trend,
   className,
+  variant = "default",
 }: KpiCardProps) {
+  const styles = variantStyles[variant]
+
   return (
-    <Card className={cn("relative overflow-hidden", className)}>
-      <CardHeader className="flex flex-row items-center justify-between pb-1">
-        <CardTitle className="text-xs font-medium text-muted-foreground">
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-2xl p-5 shadow-sm",
+        styles.card,
+        className
+      )}
+    >
+      {/* Top row: icon + trend */}
+      <div className="flex items-center justify-between">
+        <div className={cn("flex size-10 items-center justify-center rounded-xl", styles.icon)}>
+          <Icon className="size-5" />
+        </div>
+        {trend && (
+          <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", styles.trend)}>
+            {trend}
+          </span>
+        )}
+      </div>
+
+      {/* Value + label */}
+      <div className="mt-4">
+        <p className={cn("text-3xl font-bold tracking-tight", styles.value)}>
+          {value}
+        </p>
+        <p className={cn("mt-1 text-xs font-medium uppercase tracking-wider", styles.title)}>
           {title}
-        </CardTitle>
-        <Icon className="size-3.5 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-semibold tracking-tight">{value}</div>
-        {(subtitle || trend) && (
-          <p className="mt-0.5 text-[0.625rem] text-muted-foreground">
-            {trend && (
-              <span className="font-medium text-primary">{trend}</span>
-            )}
-            {trend && subtitle && " "}
+        </p>
+        {subtitle && (
+          <p className={cn("mt-0.5 text-[0.625rem]", styles.title)}>
             {subtitle}
           </p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

@@ -12,20 +12,22 @@ export default function LoginPage() {
   return (
     <>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Welcome back!</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Sign in to your admin account to continue.
+        <h1 className="text-2xl font-extrabold tracking-tight text-white">
+          Welcome back
+        </h1>
+        <p className="mt-1.5 text-[13px] text-white/45">
+          Smart aquaculture management for prawn farms
         </p>
       </div>
       <LoginForm />
-      <p className="mt-6 text-center text-xs text-muted-foreground">
+      <div className="mt-2.5 text-right">
         <Link
           href="/forgot-password"
-          className="text-primary underline-offset-4 hover:underline"
+          className="text-xs font-medium text-emerald-300/70 underline-offset-4 hover:underline"
         >
-          Forgot your password?
+          Forgot password?
         </Link>
-      </p>
+      </div>
     </>
   )
 }

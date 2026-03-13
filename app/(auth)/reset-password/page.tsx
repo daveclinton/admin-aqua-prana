@@ -12,17 +12,19 @@ export default function ResetPasswordPage() {
   return (
     <>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Reset password</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Enter your reset code and a new password.
+        <h1 className="text-2xl font-extrabold tracking-tight text-white">
+          Reset password
+        </h1>
+        <p className="mt-1.5 text-[13px] text-white/45">
+          Enter a new password for your account.
         </p>
       </div>
       <ResetPasswordForm />
-      <p className="mt-6 text-center text-xs text-muted-foreground">
+      <p className="mt-6 text-center text-xs text-white/40">
         Back to{" "}
         <Link
           href="/login"
-          className="text-primary underline-offset-4 hover:underline"
+          className="font-medium text-emerald-300/70 underline-offset-4 hover:underline"
         >
           Sign in
         </Link>

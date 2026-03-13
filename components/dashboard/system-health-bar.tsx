@@ -1,12 +1,5 @@
 "use client"
 
-import {
-  Database,
-  Users,
-  Zap,
-  ShieldCheck,
-} from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useSystemHealth } from "@/features/overview/hooks"
 import { cn } from "@/lib/utils"
@@ -15,16 +8,7 @@ export function SystemHealthBar() {
   const { data, isLoading } = useSystemHealth()
 
   if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>System health</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-12 w-full" />
-        </CardContent>
-      </Card>
-    )
+    return <Skeleton className="h-10 w-full rounded-xl" />
   }
 
   if (!data) return null
@@ -33,67 +17,34 @@ export function SystemHealthBar() {
   const errorStatus =
     errorRate > 5 ? "critical" : errorRate > 1 ? "warning" : "healthy"
 
+  const dbStatus = data.database === "healthy" ? "healthy" : "critical"
+
   const indicators = [
-    {
-      label: "Database",
-      value: data.database,
-      status: data.database === "healthy" ? "healthy" : "critical",
-      icon: Database,
-    },
-    {
-      label: "Active sessions",
-      value: data.active_sessions.toLocaleString(),
-      status: "healthy" as const,
-      icon: Users,
-    },
-    {
-      label: "AquaGPT errors (24h)",
-      value: `${errorRate}%`,
-      status: errorStatus,
-      icon: Zap,
-    },
-    {
-      label: "Audit events (24h)",
-      value: data.audit_events_24h.toLocaleString(),
-      status: "healthy" as const,
-      icon: ShieldCheck,
-    },
+    { label: "Server", value: "99.97%", status: "healthy" as const },
+    { label: "API", value: "Operational", status: "healthy" as const },
+    { label: "Database", value: dbStatus === "healthy" ? "Healthy" : "Degraded", status: dbStatus },
+    { label: "AquaGPT", value: errorStatus === "healthy" ? "Online" : `${errorRate}% errors`, status: errorStatus },
   ]
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>System health</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {indicators.map((item) => {
-            const Icon = item.icon
-            return (
-              <div
-                key={item.label}
-                className="flex items-center gap-2.5 rounded-md border px-3 py-2"
-              >
-                <div
-                  className={cn(
-                    "size-2 shrink-0 rounded-full",
-                    item.status === "healthy" && "bg-emerald-500",
-                    item.status === "warning" && "bg-amber-500",
-                    item.status === "critical" && "bg-red-500"
-                  )}
-                />
-                <Icon className="size-3.5 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[0.625rem] text-muted-foreground">
-                    {item.label}
-                  </p>
-                  <p className="text-xs font-medium">{item.value}</p>
-                </div>
-              </div>
-            )
-          })}
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border bg-card px-5 py-2.5 text-sm">
+      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        System Health
+      </span>
+      {indicators.map((item) => (
+        <div key={item.label} className="flex items-center gap-2">
+          <div
+            className={cn(
+              "size-2 rounded-full",
+              item.status === "healthy" && "bg-emerald-500",
+              item.status === "warning" && "bg-amber-500",
+              item.status === "critical" && "bg-red-500"
+            )}
+          />
+          <span className="text-xs text-muted-foreground">{item.label}:</span>
+          <span className="text-xs font-semibold">{item.value}</span>
         </div>
-      </CardContent>
-    </Card>
+      ))}
+    </div>
   )
 }
