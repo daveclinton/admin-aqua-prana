@@ -3,6 +3,25 @@ import type { ApiSuccessResponse } from "@/types/auth"
 import type { PassbookEntryDTO, PassbookEntryRow } from "./types"
 import type { DataTableQueryResult } from "@/lib/table/table-types"
 
+/* ── Stats ── */
+
+export type PassbookStats = {
+  total_entries: number
+  total_credits: number
+  total_debits: number
+  unique_farmers: number
+  unique_ponds: number
+}
+
+export async function getPassbookStats(): Promise<PassbookStats> {
+  const res = await api<ApiSuccessResponse<PassbookStats>>(
+    "/v1/admin/passbook/stats"
+  )
+  return res.data
+}
+
+/* ── List ── */
+
 type PassbookResponse = {
   entries: PassbookEntryDTO[]
   total: number

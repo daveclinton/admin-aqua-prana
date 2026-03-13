@@ -3,6 +3,26 @@ import type { ApiSuccessResponse } from "@/types/auth"
 import type { FarmerDTO, FarmerRow } from "./types"
 import type { DataTableQueryResult } from "@/lib/table/table-types"
 
+/* ── Stats ── */
+
+export type FarmerStats = {
+  total_farmers: number
+  active_farmers: number
+  verified_farmers: number
+  new_last_30d: number
+  total_ponds: number
+  active_ponds: number
+}
+
+export async function getFarmerStats(): Promise<FarmerStats> {
+  const res = await api<ApiSuccessResponse<FarmerStats>>(
+    "/v1/admin/farmers/stats"
+  )
+  return res.data
+}
+
+/* ── List ── */
+
 type FarmersResponse = {
   users: FarmerDTO[]
   total: number

@@ -12,8 +12,9 @@ import { useQueryStates } from "nuqs"
 import { DataTable } from "@/components/table/data-table"
 import { DataTableToolbar } from "@/components/table/data-table-toolbar"
 import { KpiCard } from "@/components/dashboard/kpi-card"
-import { BookOpen, CheckSquare, Filter } from "lucide-react"
-import { getPassbookEntries } from "@/features/passbook/api"
+import { Skeleton } from "@/components/ui/skeleton"
+import { BookOpen, TrendingUp, TrendingDown, Users, Waves } from "lucide-react"
+import { getPassbookEntries, getPassbookStats } from "@/features/passbook/api"
 import { passbookColumns } from "@/features/passbook/tables/passbook-columns"
 import type { PassbookEntryRow } from "@/features/passbook/types"
 import { queryKeys } from "@/lib/react-query/query-keys"
@@ -128,30 +129,53 @@ export function PassbookTableClient() {
     },
   })
 
-  const selectedCount = table.getFilteredSelectedRowModel().rows.length
-  const filterCount = queryState.globalFilter ? 1 : 0
+  const statsQuery = useQuery({
+    queryKey: queryKeys.passbook.stats,
+    queryFn: getPassbookStats,
+  })
+  const stats = statsQuery.data
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
-        <KpiCard
-          title="Total Entries"
-          value={rowCount.toLocaleString()}
-          icon={BookOpen}
-          variant="green"
-        />
-        <KpiCard
-          title="Selected Rows"
-          value={selectedCount.toString()}
-          icon={CheckSquare}
-          variant="teal"
-        />
-        <KpiCard
-          title="Active Filters"
-          value={filterCount.toString()}
-          icon={Filter}
-          variant="amber"
-        />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {statsQuery.isLoading ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-[140px] rounded-2xl" />
+          ))
+        ) : (
+          <>
+            <KpiCard
+              title="Total Entries"
+              value={(stats?.total_entries ?? rowCount).toLocaleString()}
+              icon={BookOpen}
+              variant="green"
+            />
+            <KpiCard
+              title="Credits"
+              value={(stats?.total_credits ?? 0).toLocaleString()}
+              icon={TrendingUp}
+              variant="teal"
+            />
+            <KpiCard
+              title="Debits"
+              value={(stats?.total_debits ?? 0).toLocaleString()}
+              icon={TrendingDown}
+              variant="red"
+            />
+            <KpiCard
+              title="Farmers"
+              value={(stats?.unique_farmers ?? 0).toLocaleString()}
+              icon={Users}
+              variant="amber"
+            />
+            <KpiCard
+              title="Ponds"
+              value={(stats?.unique_ponds ?? 0).toLocaleString()}
+              icon={Waves}
+              variant="teal"
+            />
+          </>
+        )}
       </div>
 
       <section className="overflow-hidden rounded-2xl border bg-card shadow-xs shadow-black/5">

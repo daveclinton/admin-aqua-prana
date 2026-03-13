@@ -3,6 +3,25 @@ import type { ApiSuccessResponse } from "@/types/auth"
 import type { PartnerDTO, PartnerRow } from "./types"
 import type { DataTableQueryResult } from "@/lib/table/table-types"
 
+/* ── Stats ── */
+
+export type PartnerStats = {
+  total_partners: number
+  active_partners: number
+  verified_partners: number
+  activated_partners: number
+  new_last_30d: number
+}
+
+export async function getPartnerStats(): Promise<PartnerStats> {
+  const res = await api<ApiSuccessResponse<PartnerStats>>(
+    "/v1/admin/partners/stats"
+  )
+  return res.data
+}
+
+/* ── List ── */
+
 type PartnersResponse = {
   partners: PartnerDTO[]
   total: number

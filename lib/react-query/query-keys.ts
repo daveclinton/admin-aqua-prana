@@ -12,10 +12,12 @@ export const queryKeys = {
   farmers: {
     all: (params?: Record<string, unknown>) => ["farmers", params] as const,
     detail: (id: string) => ["farmers", id] as const,
+    stats: ["farmers", "stats"] as const,
   },
   partners: {
     all: (params?: Record<string, unknown>) => ["partners", params] as const,
     detail: (id: string) => ["partners", id] as const,
+    stats: ["partners", "stats"] as const,
   },
   marketplace: {
     products: (params?: Record<string, unknown>) =>
@@ -67,6 +69,7 @@ export const queryKeys = {
     entries: (params?: Record<string, unknown>) =>
       ["passbook", "entries", params] as const,
     summary: ["passbook", "summary"] as const,
+    stats: ["passbook", "stats"] as const,
   },
   aquagpt: {
     usage: (params?: Record<string, unknown>) =>

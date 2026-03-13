@@ -12,8 +12,9 @@ import { useQueryStates } from "nuqs"
 import { DataTable } from "@/components/table/data-table"
 import { DataTableToolbar } from "@/components/table/data-table-toolbar"
 import { KpiCard } from "@/components/dashboard/kpi-card"
-import { Users, CheckSquare, Filter } from "lucide-react"
-import { getFarmers } from "@/features/farmers/api"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Users, ShieldCheck, Waves, UserCheck } from "lucide-react"
+import { getFarmers, getFarmerStats } from "@/features/farmers/api"
 import { farmerColumns } from "@/features/farmers/tables/farmer-columns"
 import type { FarmerRow } from "@/features/farmers/types"
 import { queryKeys } from "@/lib/react-query/query-keys"
@@ -128,30 +129,49 @@ export function FarmersTableClient() {
     },
   })
 
-  const selectedCount = table.getFilteredSelectedRowModel().rows.length
-  const filterCount = queryState.globalFilter ? 1 : 0
+  const statsQuery = useQuery({
+    queryKey: queryKeys.farmers.stats,
+    queryFn: getFarmerStats,
+  })
+  const stats = statsQuery.data
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
-        <KpiCard
-          title="Total Farmers"
-          value={rowCount.toLocaleString()}
-          icon={Users}
-          variant="green"
-        />
-        <KpiCard
-          title="Selected Rows"
-          value={selectedCount.toString()}
-          icon={CheckSquare}
-          variant="teal"
-        />
-        <KpiCard
-          title="Active Filters"
-          value={filterCount.toString()}
-          icon={Filter}
-          variant="amber"
-        />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {statsQuery.isLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[140px] rounded-2xl" />
+          ))
+        ) : (
+          <>
+            <KpiCard
+              title="Total Farmers"
+              value={(stats?.total_farmers ?? rowCount).toLocaleString()}
+              subtitle={stats ? `${stats.new_last_30d} new this month` : undefined}
+              icon={Users}
+              variant="green"
+            />
+            <KpiCard
+              title="Active Farmers"
+              value={(stats?.active_farmers ?? 0).toLocaleString()}
+              icon={UserCheck}
+              variant="teal"
+            />
+            <KpiCard
+              title="Verified"
+              value={(stats?.verified_farmers ?? 0).toLocaleString()}
+              icon={ShieldCheck}
+              variant="amber"
+            />
+            <KpiCard
+              title="Total Ponds"
+              value={(stats?.total_ponds ?? 0).toLocaleString()}
+              subtitle={stats ? `${stats.active_ponds} active` : undefined}
+              icon={Waves}
+              variant="teal"
+            />
+          </>
+        )}
       </div>
 
       <section className="overflow-hidden rounded-2xl border bg-card shadow-xs shadow-black/5">
