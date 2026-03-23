@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { PAGE_METADATA } from "@/lib/constants/app"
+import { CommunicationClient } from "@/features/communication/components/communication-client"
 
 const page = PAGE_METADATA["/communication"]
 
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 }
 
 export default function CommunicationPage() {
-  return <div>Communication</div>
+  return <CommunicationClient />
 }
