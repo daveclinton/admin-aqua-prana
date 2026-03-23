@@ -157,6 +157,9 @@ export function PartnerProfileClient({ partnerId }: { partnerId: string }) {
     queryClient.invalidateQueries({
       queryKey: queryKeys.partners.detail(partnerId),
     })
+    // Also refresh partners list & stats since name/status may have changed
+    queryClient.invalidateQueries({ queryKey: ["partners"] })
+    queryClient.invalidateQueries({ queryKey: queryKeys.overview.stats })
   }
 
   const statusMutation = useMutation({
@@ -182,6 +185,10 @@ export function PartnerProfileClient({ partnerId }: { partnerId: string }) {
   const deleteMutation = useMutation({
     mutationFn: () => deletePartner(partnerId),
     onSuccess: () => {
+      // Invalidate everything partner-related before navigating away
+      queryClient.invalidateQueries({ queryKey: ["partners"] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.overview.stats })
+      queryClient.invalidateQueries({ queryKey: queryKeys.overview.alerts })
       toast.success("Partner deleted")
       router.push("/partners")
     },

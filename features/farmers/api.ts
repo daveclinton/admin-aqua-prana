@@ -85,11 +85,11 @@ function mapFarmerDTOToRow(dto: FarmerDTO): FarmerRow {
     id: dto.id,
     name: fullName || dto.name || dto.email,
     email: dto.email,
-    region: dto.organization_name || "-",
-    plan: "Standard",
+    region: dto.region || dto.organization_name || "-",
+    plan: dto.plan_name || "Free",
     species: dto.species || "-",
     pondCount: dto.pond_count ?? 0,
-    avgPondScore: "-",
+    avgPondScore: dto.avg_pond_score != null ? String(dto.avg_pond_score) : "-",
     alertCount: dto.alert_count ?? 0,
     lastLogin: dto.last_login
       ? new Date(dto.last_login).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -106,6 +106,7 @@ export type CreateFarmerData = {
   last_name: string
   phone?: string
   organization_name?: string
+  region?: string
   language?: string
 }
 
@@ -169,6 +170,7 @@ export type UpdateFarmerData = {
   last_name?: string
   phone?: string
   organization_name?: string
+  region?: string
   language?: string
 }
 
@@ -207,6 +209,7 @@ export type CreatePondData = {
   depth?: number
   latitude?: number
   longitude?: number
+  species?: string
   status?: "active" | "inactive" | "archived"
 }
 

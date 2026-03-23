@@ -138,9 +138,16 @@ export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
 
   const invalidateFarmer = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.farmers.detail(farmerId) })
+    // Also refresh the farmers list & stats since name/status may have changed
+    queryClient.invalidateQueries({ queryKey: ["farmers"] })
+    queryClient.invalidateQueries({ queryKey: queryKeys.overview.stats })
   }
   const invalidatePonds = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.farmers.ponds(farmerId) })
+    // Pond count affects farmer stats, overview stats, and overview alerts
+    queryClient.invalidateQueries({ queryKey: queryKeys.farmers.stats })
+    queryClient.invalidateQueries({ queryKey: queryKeys.overview.stats })
+    queryClient.invalidateQueries({ queryKey: queryKeys.overview.alerts })
   }
 
   const editMutation = useMutation({
@@ -156,6 +163,11 @@ export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
   const deleteMutation = useMutation({
     mutationFn: () => deleteFarmer(farmerId),
     onSuccess: () => {
+      // Invalidate everything farmer-related before navigating away
+      queryClient.invalidateQueries({ queryKey: ["farmers"] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.overview.stats })
+      queryClient.invalidateQueries({ queryKey: queryKeys.overview.alerts })
+      queryClient.invalidateQueries({ queryKey: queryKeys.passbook.stats })
       toast.success("Farmer deleted")
       router.push("/farmers")
     },
@@ -176,6 +188,8 @@ export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
     mutationFn: (pondId: string) => deletePond(farmerId, pondId),
     onSuccess: () => {
       invalidatePonds()
+      // Passbook entries may reference deleted pond
+      queryClient.invalidateQueries({ queryKey: queryKeys.farmers.passbook(farmerId) })
       setDeletePondTarget(null)
       toast.success("Pond deleted")
     },
@@ -360,6 +374,7 @@ export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Name</TableHead>
+                        <TableHead>Species</TableHead>
                         <TableHead>Area</TableHead>
                         <TableHead>Depth</TableHead>
                         <TableHead>Location</TableHead>
@@ -372,6 +387,7 @@ export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
                       {ponds.map((pond) => (
                         <TableRow key={pond.id}>
                           <TableCell className="font-medium">{pond.name}</TableCell>
+                          <TableCell className="text-muted-foreground">{pond.species ?? "-"}</TableCell>
                           <TableCell className="text-muted-foreground">
                             {pond.area != null ? `${pond.area} ${pond.area_unit ?? "Ha"}` : "-"}
                           </TableCell>
@@ -582,6 +598,7 @@ function EditFarmerSheet({
   const [firstName, setFirstName] = useState(farmer.first_name ?? "")
   const [lastName, setLastName] = useState(farmer.last_name ?? "")
   const [phone, setPhone] = useState(farmer.phone ?? "")
+  const [region, setRegion] = useState((farmer as Record<string, unknown>).region as string ?? "")
   const [orgName, setOrgName] = useState(farmer.organization_name ?? "")
   const [language, setLanguage] = useState(farmer.language ?? "")
   const [accountStatus, setAccountStatus] = useState(farmer.account_status)
@@ -592,6 +609,7 @@ function EditFarmerSheet({
       setFirstName(farmer.first_name ?? "")
       setLastName(farmer.last_name ?? "")
       setPhone(farmer.phone ?? "")
+      setRegion((farmer as Record<string, unknown>).region as string ?? "")
       setOrgName(farmer.organization_name ?? "")
       setLanguage(farmer.language ?? "")
       setAccountStatus(farmer.account_status)
@@ -606,6 +624,7 @@ function EditFarmerSheet({
     if (firstName !== (farmer.first_name ?? "")) data.first_name = firstName || undefined
     if (lastName !== (farmer.last_name ?? "")) data.last_name = lastName || undefined
     if (phone !== (farmer.phone ?? "")) data.phone = phone || undefined
+    if (region !== ((farmer as Record<string, unknown>).region as string ?? "")) data.region = region || undefined
     if (orgName !== (farmer.organization_name ?? "")) data.organization_name = orgName || undefined
     if (language !== (farmer.language ?? "")) data.language = language || undefined
     if (accountStatus !== farmer.account_status) data.account_status = accountStatus as UpdateFarmerData["account_status"]
@@ -630,6 +649,9 @@ function EditFarmerSheet({
           </FormField>
           <FormField label="Phone">
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </FormField>
+          <FormField label="Region">
+            <Input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="e.g. Andhra Pradesh" />
           </FormField>
           <FormField label="Organization">
             <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} />
@@ -701,6 +723,7 @@ function AddPondSheet({
   const [area, setArea] = useState("")
   const [areaUnit, setAreaUnit] = useState("Ha")
   const [depth, setDepth] = useState("")
+  const [species, setSpecies] = useState("")
   const [latitude, setLatitude] = useState("")
   const [longitude, setLongitude] = useState("")
 
@@ -710,6 +733,7 @@ function AddPondSheet({
       setArea("")
       setAreaUnit("Ha")
       setDepth("")
+      setSpecies("")
       setLatitude("")
       setLongitude("")
     }
@@ -724,6 +748,7 @@ function AddPondSheet({
       area: area ? Number(area) : undefined,
       area_unit: areaUnit,
       depth: depth ? Number(depth) : undefined,
+      species: species.trim() || undefined,
       latitude: latitude ? Number(latitude) : undefined,
       longitude: longitude ? Number(longitude) : undefined,
     })
@@ -756,6 +781,17 @@ function AddPondSheet({
               </select>
             </FormField>
           </div>
+          <FormField label="Species">
+            <select
+              value={species}
+              onChange={(e) => setSpecies(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="">Select species</option>
+              <option value="L. vannamei">L. vannamei (Whiteleg Shrimp)</option>
+              <option value="P. monodon">P. monodon (Tiger Shrimp)</option>
+            </select>
+          </FormField>
           <FormField label="Depth (meters)">
             <Input type="number" step="0.01" value={depth} onChange={(e) => setDepth(e.target.value)} placeholder="e.g. 1.5" />
           </FormField>

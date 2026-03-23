@@ -158,6 +158,8 @@ export function FarmersTableClient() {
     mutationFn: (data: CreateFarmerData) => createFarmer(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["farmers"] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.overview.stats })
+      queryClient.invalidateQueries({ queryKey: queryKeys.overview.alerts })
       setAddOpen(false)
       toast.success("Farmer created successfully")
     },
@@ -253,6 +255,7 @@ function AddFarmerSheet({
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [phone, setPhone] = useState("")
+  const [region, setRegion] = useState("")
   const [orgName, setOrgName] = useState("")
   const [language, setLanguage] = useState("en")
 
@@ -262,6 +265,7 @@ function AddFarmerSheet({
       setFirstName("")
       setLastName("")
       setPhone("")
+      setRegion("")
       setOrgName("")
       setLanguage("en")
     }
@@ -278,6 +282,7 @@ function AddFarmerSheet({
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       phone: phone.trim() || undefined,
+      region: region.trim() || undefined,
       organization_name: orgName.trim() || undefined,
       language: language.trim() || "en",
     })
@@ -305,8 +310,11 @@ function AddFarmerSheet({
           <FormField label="Phone">
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" />
           </FormField>
-          <FormField label="Region / Organization">
-            <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="e.g. Andhra Pradesh" />
+          <FormField label="Region">
+            <Input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="e.g. Andhra Pradesh" />
+          </FormField>
+          <FormField label="Organization">
+            <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="e.g. Aqua Farms Ltd" />
           </FormField>
           <FormField label="Language">
             <select

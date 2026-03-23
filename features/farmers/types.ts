@@ -13,10 +13,13 @@ export type FarmerDTO = {
   last_name: string | null
   phone: string | null
   organization_name: string | null
+  region: string | null
   pond_count: number
   species: string | null
   alert_count: number
   last_login: string | null
+  avg_pond_score: number | null
+  plan_name: string | null
 }
 
 export type FarmerRow = {
@@ -61,6 +64,7 @@ export type FarmerPond = {
   depth: number | null
   latitude: number | null
   longitude: number | null
+  species: string | null
   status: "active" | "inactive" | "archived"
   metadata: Record<string, unknown>
   created_at: string
