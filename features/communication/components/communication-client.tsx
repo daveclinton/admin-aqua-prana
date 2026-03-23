@@ -76,19 +76,25 @@ type CampaignRow = {
 type AnalyticsAudienceRow = {
   id: string
   audience: string
-  channelMix: string
-  reach: number
-  openRate: string
-  optOuts: number
+  rate: number
+  tone: "green" | "amber" | "blue" | "red"
 }
 
 type SendWindowRow = {
   id: string
-  window: string
-  channel: "Push" | "SMS" | "Email" | "Push + SMS"
+  label: string
+  value: string
+  subtitle: string
+}
+
+type MessageTypePerformanceRow = {
+  id: string
+  type: string
   sends: number
-  openRate: string
-  note: string
+  pushOpen: string
+  emailOpen: string
+  optOuts: number
+  tone: "red" | "blue" | "amber" | "green"
 }
 
 const broadcastHistory: BroadcastRow[] = [
@@ -183,16 +189,25 @@ const smsCampaigns: CampaignRow[] = [
 ]
 
 const audiencePerformance: AnalyticsAudienceRow[] = [
-  { id: "a1", audience: "Chennai", channelMix: "Push + SMS", reach: 38, openRate: "91%", optOuts: 0 },
-  { id: "a2", audience: "Pro Plan", channelMix: "Push", reach: 98, openRate: "64%", optOuts: 2 },
-  { id: "a3", audience: "All Users", channelMix: "Push + Email", reach: 200, openRate: "78%", optOuts: 1 },
-  { id: "a4", audience: "Mumbai", channelMix: "SMS", reach: 62, openRate: "93%", optOuts: 0 },
+  { id: "a1", audience: "Pro Plan Farmers", rate: 84.2, tone: "green" },
+  { id: "a2", audience: "Enterprise Farmers", rate: 91, tone: "green" },
+  { id: "a3", audience: "Free Tier Farmers", rate: 61.3, tone: "amber" },
+  { id: "a4", audience: "New Farmers (<30 days)", rate: 76.8, tone: "blue" },
+  { id: "a5", audience: "Inactive (>7 days)", rate: 41.2, tone: "red" },
 ]
 
 const sendWindows: SendWindowRow[] = [
-  { id: "w1", window: "06:00 - 08:00", channel: "SMS", sends: 24, openRate: "93%", note: "Strong for urgent pond alerts" },
-  { id: "w2", window: "09:00 - 11:00", channel: "Push", sends: 42, openRate: "84%", note: "Best for product and feature updates" },
-  { id: "w3", window: "16:00 - 18:00", channel: "Push + SMS", sends: 19, openRate: "88%", note: "Works well for reminder campaigns" },
+  { id: "w1", label: "Weekday", value: "9AM", subtitle: "84% open" },
+  { id: "w2", label: "Weekday", value: "6PM", subtitle: "81% open" },
+  { id: "w3", label: "Weekend", value: "10AM", subtitle: "72% open" },
+  { id: "w4", label: "Best Day", value: "Tue", subtitle: "89% open" },
+]
+
+const messageTypePerformance: MessageTypePerformanceRow[] = [
+  { id: "mt1", type: "Safety Alerts", sends: 18, pushOpen: "91%", emailOpen: "88%", optOuts: 0, tone: "red" },
+  { id: "mt2", type: "Product Updates", sends: 4, pushOpen: "84%", emailOpen: "78%", optOuts: 0, tone: "blue" },
+  { id: "mt3", type: "Billing Reminders", sends: 12, pushOpen: "74%", emailOpen: "71%", optOuts: 2, tone: "blue" },
+  { id: "mt4", type: "Promotions", sends: 6, pushOpen: "62%", emailOpen: "58%", optOuts: 3, tone: "amber" },
 ]
 
 const tabOptions = ["push", "sms", "analytics", "sent-log"] as const
@@ -220,18 +235,6 @@ const suppressionSearchParams = createTableSearchParams({
   defaultPageSize: 5,
   defaultSort: "date.desc",
   urlKeys: { globalFilter: "supQ", pageIndex: "supPage", pageSize: "supSize", sort: "supSort" },
-})
-
-const audienceSearchParams = createTableSearchParams({
-  defaultPageSize: 5,
-  defaultSort: "reach.desc",
-  urlKeys: { globalFilter: "audQ", pageIndex: "audPage", pageSize: "audSize", sort: "audSort" },
-})
-
-const windowsSearchParams = createTableSearchParams({
-  defaultPageSize: 5,
-  defaultSort: "openRate.desc",
-  urlKeys: { globalFilter: "winQ", pageIndex: "winPage", pageSize: "winSize", sort: "winSort" },
 })
 
 export function CommunicationClient() {
@@ -588,64 +591,149 @@ export function CommunicationClient() {
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6 pt-4">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <KpiCard title="Best Channel" value="SMS" subtitle="91% average open rate" icon={BarChart3} variant="green" />
-            <KpiCard title="Top Audience" value="Mumbai" subtitle="Highest engagement this month" icon={Users} variant="teal" />
-            <KpiCard title="Best Time Slot" value="09:00" subtitle="Push campaigns perform strongest" icon={Clock3} variant="amber" />
-            <KpiCard title="Low-Performing Segment" value="Free Tier" subtitle="Needs message refresh" icon={MessageSquare} variant="default" />
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <KpiCard title="Push Open Rate" value="78.4%" subtitle="↑ +3% vs last mo" icon={Bell} variant="green" />
+            <KpiCard title="Email Open Rate" value="72%" subtitle="Steady across campaigns" icon={Mail} variant="teal" />
+            <KpiCard title="SMS Delivery" value="99.1%" subtitle="Strong system-wide delivery" icon={Smartphone} variant="amber" />
+            <KpiCard title="Opt-Out Rate" value="0.6%" subtitle="Well within healthy range" icon={MessageSquare} variant="default" />
+            <KpiCard title="Messages Sent / Mo" value="142" subtitle="All campaign channels" icon={Send} variant="green" />
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="grid gap-4 xl:grid-cols-[1fr_0.95fr]">
             <Card className="rounded-2xl">
               <CardHeader>
-                <CardTitle>Audience Performance</CardTitle>
+                <CardTitle>Open Rate Trend — All Channels</CardTitle>
               </CardHeader>
-              <CardContent>
-                <LocalTable
-                  data={audiencePerformance}
-                  columns={audiencePerformanceColumns}
-                  searchParams={audienceSearchParams}
-                  fallbackSortColumn="reach"
-                  searchPlaceholder="Search audiences"
-                  emptyTitle="No audience analytics"
-                  emptyDescription="Audience engagement data will appear here."
-                />
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-end gap-2">
+                  <button className="rounded-full bg-[#224d3a] px-4 py-1.5 text-xs font-medium text-white">30D</button>
+                  <button className="rounded-full border px-4 py-1.5 text-xs font-medium text-muted-foreground">90D</button>
+                  <button className="rounded-full border px-4 py-1.5 text-xs font-medium text-muted-foreground">12M</button>
+                </div>
+                <div className="rounded-2xl bg-[#f3f8f4] p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-end gap-3 text-[11px] text-muted-foreground">
+                    <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-emerald-600" /> Push 78.4%</span>
+                    <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-teal-500" /> Email 72%</span>
+                    <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-amber-500" /> SMS 99%</span>
+                  </div>
+                  <div className="relative h-44 overflow-hidden rounded-xl bg-[linear-gradient(to_right,transparent_0%,transparent_24.5%,rgba(23,57,42,0.06)_25%,transparent_25.5%,transparent_49.5%,rgba(23,57,42,0.06)_50%,transparent_50.5%,transparent_74.5%,rgba(23,57,42,0.06)_75%,transparent_75.5%),linear-gradient(to_bottom,rgba(23,57,42,0.04)_1px,transparent_1px)] bg-[length:100%_100%,100%_36px]">
+                    <div className="absolute left-[26%] right-[10%] top-4 border-t-2 border-dashed border-amber-400" />
+                    <div className="absolute inset-x-[26%] bottom-8 top-10">
+                      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
+                        <polyline
+                          fill="none"
+                          stroke="#2f855a"
+                          strokeWidth="2.2"
+                          points="0,72 18,64 42,49 66,33 100,24"
+                        />
+                        <polyline
+                          fill="none"
+                          stroke="#2563eb"
+                          strokeWidth="1.8"
+                          strokeDasharray="4 2"
+                          points="0,77 18,69 42,56 66,42 100,34"
+                        />
+                        <circle cx="100" cy="24" r="2.7" fill="#2f855a" />
+                      </svg>
+                    </div>
+                    <div className="absolute bottom-1 left-[26%] right-[10%] flex justify-between text-[10px] text-muted-foreground">
+                      <span>Jan 22</span>
+                      <span>Jan 29</span>
+                      <span>Feb 5</span>
+                      <span>Feb 12</span>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
             <Card className="rounded-2xl">
               <CardHeader>
-                <CardTitle>Best Send Windows</CardTitle>
+                <CardTitle>Message Type Performance</CardTitle>
               </CardHeader>
               <CardContent>
-                <LocalTable
-                  data={sendWindows}
-                  columns={sendWindowColumns}
-                  searchParams={windowsSearchParams}
-                  fallbackSortColumn="openRate"
-                  searchPlaceholder="Search send windows"
-                  emptyTitle="No send window data"
-                  emptyDescription="Send-time analytics will appear here."
-                />
+                <div className="overflow-hidden rounded-2xl border">
+                  <div className="grid grid-cols-[1.2fr_0.6fr_0.7fr_0.7fr_0.7fr] gap-3 bg-muted/40 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <span>Type</span>
+                    <span>Sends</span>
+                    <span>Push Open</span>
+                    <span>Email Open</span>
+                    <span>Opt-Outs</span>
+                  </div>
+                  <div className="divide-y">
+                    {messageTypePerformance.map((item) => (
+                      <div key={item.id} className="grid grid-cols-[1.2fr_0.6fr_0.7fr_0.7fr_0.7fr] gap-3 px-4 py-4 text-sm">
+                        <div>
+                          <AnalyticsToneBadge tone={item.tone}>{item.type}</AnalyticsToneBadge>
+                        </div>
+                        <span>{item.sends}</span>
+                        <span className={item.pushOpen === "91%" || item.pushOpen === "84%" ? "font-medium text-emerald-600" : item.pushOpen === "62%" ? "font-medium text-amber-600" : "font-medium text-blue-600"}>{item.pushOpen}</span>
+                        <span>{item.emailOpen}</span>
+                        <span>{item.optOuts}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[1fr_0.95fr]">
+            <Card className="rounded-2xl">
+              <CardHeader>
+                <CardTitle>Audience Engagement Segments</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {audiencePerformance.map((segment) => (
+                  <div key={segment.id} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-sm">
+                      <p className="font-medium">{segment.audience}</p>
+                      <p className={analyticsToneText(segment.tone)}>{segment.rate.toFixed(1)}%</p>
+                    </div>
+                    <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={analyticsToneBar(segment.tone)}
+                        style={{ width: `${segment.rate}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl">
+              <CardHeader>
+                <CardTitle>Send Time Intelligence</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="rounded-2xl bg-[#f3f8f4] p-4">
+                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Best times to send (by open rate)
+                  </p>
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    {sendWindows.map((item) => (
+                      <div key={item.id} className="rounded-xl border bg-white px-4 py-3 text-center shadow-xs shadow-black/5">
+                        <p className="text-xs text-muted-foreground">{item.label}</p>
+                        <p className={item.value === "10AM" ? "mt-1 text-2xl font-semibold text-amber-600" : item.value === "Tue" ? "mt-1 text-2xl font-semibold text-blue-600" : "mt-1 text-2xl font-semibold text-emerald-600"}>{item.value}</p>
+                        <p className="text-xs text-muted-foreground">{item.subtitle}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-0">
+                  <AnalyticsSummaryRow label="Opt-out rate (30d)" value="0.6%" valueClassName="text-emerald-600" />
+                  <AnalyticsSummaryRow label="Avg messages / user / mo" value="3.2" />
+                  <AnalyticsSummaryRow label="Highest performing message" value="Safety Alerts (91%)" valueClassName="text-emerald-600" />
+                </div>
+
+                <Button variant="outline">Download Analytics Report</Button>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
         <TabsContent value="sent-log" className="space-y-6 pt-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-base font-semibold">Message Sent Log</h3>
-              <p className="text-xs text-muted-foreground">
-                Review campaign performance, suppressions, and delivery health.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">Export CSV</Button>
-              <Button variant="outline" size="sm">Back to Campaigns</Button>
-            </div>
-          </div>
-
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <KpiCard title="Messages Sent" value="142" subtitle="This month" icon={Mail} variant="green" />
             <KpiCard title="Avg Open Rate" value="78.4%" subtitle="Across all sends" icon={CheckCircle2} variant="teal" />
@@ -654,8 +742,17 @@ export function CommunicationClient() {
           </div>
 
           <Card className="rounded-2xl">
-            <CardHeader>
+            <CardHeader className="flex-row items-center justify-between gap-3">
               <CardTitle>Broadcast History</CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative w-full min-w-[220px] md:w-[260px]">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input className="h-9 pl-9" placeholder="Search by title or recipient..." />
+                </div>
+                <SimpleFilterChip label="All Channels" />
+                <SimpleFilterChip label="All Audiences" />
+                <SimpleFilterChip label="All Time" />
+              </div>
             </CardHeader>
             <CardContent>
               <LocalTable
@@ -666,14 +763,17 @@ export function CommunicationClient() {
                 searchPlaceholder="Search by title or recipient"
                 emptyTitle="No broadcasts found"
                 emptyDescription="Sent broadcasts will appear here."
+                showToolbar={false}
+                footerNote="Showing 5 of 142 broadcasts"
               />
             </CardContent>
           </Card>
 
           <div className="grid gap-4 xl:grid-cols-2">
             <Card className="rounded-2xl">
-              <CardHeader>
+              <CardHeader className="flex-row items-center justify-between">
                 <CardTitle>Channel Performance</CardTitle>
+                <p className="text-xs text-muted-foreground">This month</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <ChannelMetric label="Push Notifications" summary="84 sent · 76% open rate" />
@@ -688,8 +788,9 @@ export function CommunicationClient() {
             </Card>
 
             <Card className="rounded-2xl">
-              <CardHeader>
+              <CardHeader className="flex-row items-center justify-between">
                 <CardTitle>Opt-Out & Suppression List</CardTitle>
+                <Button variant="outline" size="sm">Export List</Button>
               </CardHeader>
               <CardContent>
                 <LocalTable
@@ -700,6 +801,7 @@ export function CommunicationClient() {
                   searchPlaceholder="Search suppressions"
                   emptyTitle="No suppressions"
                   emptyDescription="Suppressed recipients will appear here."
+                  showToolbar={false}
                 />
               </CardContent>
             </Card>
@@ -718,6 +820,8 @@ function LocalTable<TData extends { id: string }>({
   searchPlaceholder,
   emptyTitle,
   emptyDescription,
+  showToolbar = true,
+  footerNote,
 }: {
   data: TData[]
   columns: ColumnDef<TData, unknown>[]
@@ -726,6 +830,8 @@ function LocalTable<TData extends { id: string }>({
   searchPlaceholder: string
   emptyTitle: string
   emptyDescription: string
+  showToolbar?: boolean
+  footerNote?: string
 }) {
   const [queryState, setQueryState] = useQueryStates(
     searchParams.parsers,
@@ -779,12 +885,17 @@ function LocalTable<TData extends { id: string }>({
 
   return (
     <div className="overflow-hidden rounded-2xl border bg-card shadow-xs shadow-black/5">
-      <DataTableToolbar table={table} searchPlaceholder={searchPlaceholder} />
+      {showToolbar ? <DataTableToolbar table={table} searchPlaceholder={searchPlaceholder} /> : null}
       <DataTable
         table={table}
         emptyTitle={emptyTitle}
         emptyDescription={emptyDescription}
       />
+      {footerNote ? (
+        <div className="border-t px-4 py-3 text-xs text-muted-foreground">
+          {footerNote}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -812,6 +923,17 @@ function SummaryMetric({
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={className}>{value}</p>
     </div>
+  )
+}
+
+function SimpleFilterChip({ label }: { label: string }) {
+  return (
+    <button
+      type="button"
+      className="rounded-lg border bg-background px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted"
+    >
+      {label}
+    </button>
   )
 }
 
@@ -886,42 +1008,6 @@ const suppressionColumns: ColumnDef<SuppressionRow>[] = [
   },
 ]
 
-const audiencePerformanceColumns: ColumnDef<AnalyticsAudienceRow>[] = [
-  { accessorKey: "audience", header: "Audience", enableHiding: false },
-  {
-    accessorKey: "channelMix",
-    header: "Channel Mix",
-    cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.channelMix}</span>,
-  },
-  { accessorKey: "reach", header: "Reach" },
-  {
-    accessorKey: "openRate",
-    header: "Open Rate",
-    cell: ({ row }) => <span className="font-medium text-emerald-600">{row.original.openRate}</span>,
-  },
-  { accessorKey: "optOuts", header: "Opt-Outs" },
-]
-
-const sendWindowColumns: ColumnDef<SendWindowRow>[] = [
-  { accessorKey: "window", header: "Time Window", enableHiding: false },
-  {
-    accessorKey: "channel",
-    header: "Channel",
-    cell: ({ row }) => <ChannelBadge value={row.original.channel} />,
-  },
-  { accessorKey: "sends", header: "Sends" },
-  {
-    accessorKey: "openRate",
-    header: "Open Rate",
-    cell: ({ row }) => <span className="font-medium text-emerald-600">{row.original.openRate}</span>,
-  },
-  {
-    accessorKey: "note",
-    header: "Note",
-    cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.note}</span>,
-  },
-]
-
 function ChannelBadge({ value }: { value: BroadcastRow["channel"] | SuppressionRow["channel"] }) {
   if (value === "SMS") return <Badge variant="destructive">{value}</Badge>
   if (value === "Email") return <Badge variant="outline">{value}</Badge>
@@ -933,4 +1019,54 @@ function StatusBadge({ value }: { value: CampaignRow["status"] }) {
   if (value === "Sent") return <Badge variant="default">{value}</Badge>
   if (value === "Scheduled") return <Badge variant="secondary">{value}</Badge>
   return <Badge variant="outline">{value}</Badge>
+}
+
+function AnalyticsToneBadge({
+  tone,
+  children,
+}: {
+  tone: MessageTypePerformanceRow["tone"]
+  children: string
+}) {
+  const className =
+    tone === "red"
+      ? "bg-red-50 text-red-600"
+      : tone === "blue"
+        ? "bg-blue-50 text-blue-600"
+        : tone === "amber"
+          ? "bg-amber-50 text-amber-600"
+          : "bg-emerald-50 text-emerald-600"
+
+  return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${className}`}>{children}</span>
+}
+
+function AnalyticsSummaryRow({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string
+  value: string
+  valueClassName?: string
+}) {
+  return (
+    <div className="flex items-center justify-between border-b py-3 last:border-b-0 last:pb-0">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className={`text-sm font-medium ${valueClassName ?? ""}`.trim()}>{value}</p>
+    </div>
+  )
+}
+
+function analyticsToneText(tone: AnalyticsAudienceRow["tone"]) {
+  if (tone === "green") return "font-medium text-emerald-600"
+  if (tone === "amber") return "font-medium text-amber-600"
+  if (tone === "blue") return "font-medium text-blue-600"
+  return "font-medium text-red-500"
+}
+
+function analyticsToneBar(tone: AnalyticsAudienceRow["tone"]) {
+  if (tone === "green") return "h-full rounded-full bg-emerald-500"
+  if (tone === "amber") return "h-full rounded-full bg-amber-500"
+  if (tone === "blue") return "h-full rounded-full bg-blue-600"
+  return "h-full rounded-full bg-red-500"
 }
