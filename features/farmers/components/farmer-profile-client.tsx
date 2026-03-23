@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs"
 import {
   ArrowLeft,
   Mail,
@@ -118,10 +119,18 @@ function pondStatusBadgeVariant(status: string) {
 export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const [editOpen, setEditOpen] = useState(false)
-  const [deleteOpen, setDeleteOpen] = useState(false)
-  const [addPondOpen, setAddPondOpen] = useState(false)
-  const [deletePondTarget, setDeletePondTarget] = useState<FarmerPond | null>(null)
+  const [tab, setTab] = useQueryState(
+    "tab",
+    parseAsStringLiteral(["ponds", "passbook", "activity"] as const).withDefault("ponds")
+  )
+  const [action, setAction] = useQueryState(
+    "action",
+    parseAsStringLiteral(["edit", "delete", "add-pond"] as const).withOptions({ history: "push" })
+  )
+  const [deletePondId, setDeletePondId] = useQueryState(
+    "pond",
+    parseAsString.withOptions({ history: "push" })
+  )
 
   const farmerQuery = useQuery({
     queryKey: queryKeys.farmers.detail(farmerId),
@@ -158,7 +167,7 @@ export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
     mutationFn: (data: UpdateFarmerData) => updateFarmer(farmerId, data),
     onSuccess: () => {
       invalidateFarmer()
-      setEditOpen(false)
+      void setAction(null)
       toast.success("Farmer profile updated")
     },
     onError: () => toast.error("Failed to update farmer"),
@@ -182,7 +191,7 @@ export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
     mutationFn: (data: CreatePondData) => createPond(farmerId, data),
     onSuccess: () => {
       invalidatePonds()
-      setAddPondOpen(false)
+      void setAction(null)
       toast.success("Pond created")
     },
     onError: () => toast.error("Failed to create pond"),
@@ -194,7 +203,7 @@ export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
       invalidatePonds()
       // Passbook entries may reference deleted pond
       queryClient.invalidateQueries({ queryKey: queryKeys.farmers.passbook(farmerId) })
-      setDeletePondTarget(null)
+      void setDeletePondId(null)
       toast.success("Pond deleted")
     },
     onError: () => toast.error("Failed to delete pond"),
@@ -226,6 +235,7 @@ export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
   const ponds = pondsQuery.data ?? []
   const passbook = passbookQuery.data ?? []
   const activity = activityQuery.data ?? []
+  const deletePondTarget = ponds.find((pond) => pond.id === deletePondId) ?? null
 
   return (
     <div className="space-y-6">
@@ -283,7 +293,7 @@ export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
 
           {/* Actions */}
           <div className="flex flex-wrap gap-2 sm:flex-col">
-            <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => void setAction("edit")}>
               <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
             </Button>
             {farmer.account_status === "suspended" ? (
@@ -304,7 +314,7 @@ export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
                 Suspend
               </Button>
             )}
-            <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
+            <Button size="sm" variant="destructive" onClick={() => void setAction("delete")}>
               <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
             </Button>
           </div>
@@ -349,7 +359,7 @@ export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
       </div>
 
       {/* Tabbed content */}
-      <Tabs defaultValue="ponds">
+      <Tabs value={tab} onValueChange={(value) => void setTab(value as "ponds" | "passbook" | "activity")}>
         <TabsList>
           <TabsTrigger value="ponds" className="gap-1.5"><Waves className="h-3.5 w-3.5" /> Ponds</TabsTrigger>
           <TabsTrigger value="passbook" className="gap-1.5"><BookOpen className="h-3.5 w-3.5" /> Passbook</TabsTrigger>
@@ -362,7 +372,7 @@ export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
             <CardHeader>
               <CardTitle className="text-base">Ponds</CardTitle>
               <CardAction>
-                <Button size="sm" onClick={() => setAddPondOpen(true)}>
+                <Button size="sm" onClick={() => void setAction("add-pond")}>
                   <Plus className="mr-1.5 h-3.5 w-3.5" /> Add Pond
                 </Button>
               </CardAction>
@@ -417,7 +427,7 @@ export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
                               variant="ghost"
                               size="icon-sm"
                               className="text-muted-foreground hover:text-red-600"
-                              onClick={() => setDeletePondTarget(pond)}
+                              onClick={() => void setDeletePondId(pond.id)}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
@@ -527,22 +537,22 @@ export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
       {/* Edit farmer sheet */}
       <EditFarmerSheet
         farmer={farmer}
-        open={editOpen}
-        onOpenChange={setEditOpen}
+        open={action === "edit"}
+        onOpenChange={(open) => void setAction(open ? "edit" : null)}
         onSave={(data) => editMutation.mutate(data)}
         isPending={editMutation.isPending}
       />
 
       {/* Add pond sheet */}
       <AddPondSheet
-        open={addPondOpen}
-        onOpenChange={setAddPondOpen}
+        open={action === "add-pond"}
+        onOpenChange={(open) => void setAction(open ? "add-pond" : null)}
         onSave={(data) => createPondMutation.mutate(data)}
         isPending={createPondMutation.isPending}
       />
 
       {/* Delete farmer dialog */}
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <AlertDialog open={action === "delete"} onOpenChange={(open) => void setAction(open ? "delete" : null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete farmer</AlertDialogTitle>
@@ -561,7 +571,7 @@ export function FarmerProfileClient({ farmerId }: { farmerId: string }) {
       </AlertDialog>
 
       {/* Delete pond dialog */}
-      <AlertDialog open={!!deletePondTarget} onOpenChange={(open) => !open && setDeletePondTarget(null)}>
+      <AlertDialog open={!!deletePondTarget} onOpenChange={(open) => !open && void setDeletePondId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete pond</AlertDialogTitle>

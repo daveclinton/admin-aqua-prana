@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { parseAsStringLiteral, useQueryState } from "nuqs"
 import {
   ArrowLeft,
   Mail,
@@ -150,8 +151,14 @@ function formatBytes(bytes: number): string {
 export function PartnerProfileClient({ partnerId }: { partnerId: string }) {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const [editOpen, setEditOpen] = useState(false)
-  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [tab, setTab] = useQueryState(
+    "tab",
+    parseAsStringLiteral(["campaigns", "documents", "activity"] as const).withDefault("campaigns")
+  )
+  const [action, setAction] = useQueryState(
+    "action",
+    parseAsStringLiteral(["edit", "delete"] as const).withOptions({ history: "push" })
+  )
 
   const partnerQuery = useQuery({
     queryKey: queryKeys.partners.detail(partnerId),
@@ -186,7 +193,7 @@ export function PartnerProfileClient({ partnerId }: { partnerId: string }) {
     mutationFn: (data: UpdatePartnerData) => updatePartner(partnerId, data),
     onSuccess: () => {
       invalidatePartner()
-      setEditOpen(false)
+      void setAction(null)
       toast.success("Partner profile updated")
     },
     onError: () => toast.error("Failed to update partner"),
@@ -303,7 +310,7 @@ export function PartnerProfileClient({ partnerId }: { partnerId: string }) {
 
           {/* Actions */}
           <div className="flex flex-wrap gap-2 sm:flex-col">
-            <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => void setAction("edit")}>
               <Pencil className="mr-1.5 h-3.5 w-3.5" />
               Edit
             </Button>
@@ -326,7 +333,7 @@ export function PartnerProfileClient({ partnerId }: { partnerId: string }) {
                 Suspend
               </Button>
             )}
-            <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
+            <Button size="sm" variant="destructive" onClick={() => void setAction("delete")}>
               <Trash2 className="mr-1.5 h-3.5 w-3.5" />
               Delete
             </Button>
@@ -372,7 +379,7 @@ export function PartnerProfileClient({ partnerId }: { partnerId: string }) {
       </div>
 
       {/* Tabbed content */}
-      <Tabs defaultValue="campaigns">
+      <Tabs value={tab} onValueChange={(value) => void setTab(value as "campaigns" | "documents" | "activity")}>
         <TabsList>
           <TabsTrigger value="campaigns" className="gap-1.5">
             <Megaphone className="h-3.5 w-3.5" />
@@ -575,14 +582,14 @@ export function PartnerProfileClient({ partnerId }: { partnerId: string }) {
       {/* Edit sheet */}
       <EditPartnerSheet
         partner={partner}
-        open={editOpen}
-        onOpenChange={setEditOpen}
+        open={action === "edit"}
+        onOpenChange={(open) => void setAction(open ? "edit" : null)}
         onSave={(data) => editMutation.mutate(data)}
         isPending={editMutation.isPending}
       />
 
       {/* Delete confirmation */}
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <AlertDialog open={action === "delete"} onOpenChange={(open) => void setAction(open ? "delete" : null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete partner</AlertDialogTitle>

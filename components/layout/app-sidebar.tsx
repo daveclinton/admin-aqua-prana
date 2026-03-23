@@ -18,6 +18,12 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
+function isSidebarItemActive(pathname: string, href: string) {
+  if (pathname === href) return true
+  if (href === "/") return pathname === href
+  return pathname.startsWith(`${href}/`)
+}
+
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
 
@@ -36,7 +42,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild
-                      isActive={pathname === item.href}
+                      isActive={isSidebarItemActive(pathname, item.href)}
                       tooltip={item.title}
                     >
                       <Link href={item.href}>
