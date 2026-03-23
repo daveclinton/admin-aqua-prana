@@ -2,6 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table"
 import Link from "next/link"
+import { MapPin, Mail, Phone, Megaphone, Users } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { DataTableRowActions } from "@/components/table/data-table-row-actions"
 import { formatTableDate } from "@/lib/table/table-utils"
@@ -10,7 +11,7 @@ import type { PartnerRow } from "@/features/partners/types"
 export const partnerColumns: ColumnDef<PartnerRow>[] = [
   {
     accessorKey: "name",
-    header: "Partner",
+    header: "Name",
     cell: ({ row }) => (
       <Link
         href={`/partners/${row.original.id}`}
@@ -23,19 +24,15 @@ export const partnerColumns: ColumnDef<PartnerRow>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "organization",
-    header: "Organization",
-  },
-  {
-    accessorKey: "phone",
-    header: "Phone",
+    accessorKey: "category",
+    header: "Category",
     cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.original.phone}</span>
+      <Badge variant="outline">{row.original.category}</Badge>
     ),
   },
   {
     accessorKey: "partnerStatus",
-    header: "Partner status",
+    header: "Status",
     cell: ({ row }) => (
       <Badge variant={getPartnerStatusVariant(row.original.partnerStatus)}>
         {row.original.partnerStatus.replace("_", " ")}
@@ -43,26 +40,47 @@ export const partnerColumns: ColumnDef<PartnerRow>[] = [
     ),
   },
   {
-    accessorKey: "verificationStatus",
-    header: "Verification",
+    accessorKey: "location",
+    header: "Location",
     cell: ({ row }) => (
-      <Badge variant={getVerificationVariant(row.original.verificationStatus)}>
-        {row.original.verificationStatus.replace("_", " ")}
-      </Badge>
+      <span className="inline-flex items-center gap-1 text-muted-foreground">
+        {row.original.location !== "-" && <MapPin className="h-3 w-3" />}
+        {row.original.location}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "campaignCount",
+    header: "Campaigns",
+    cell: ({ row }) => (
+      <span className="inline-flex items-center gap-1 font-medium">
+        <Megaphone className="h-3 w-3 text-muted-foreground" />
+        {row.original.campaignCount}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "connectedFarmers",
+    header: "Connected Farmers",
+    cell: ({ row }) => (
+      <span className="inline-flex items-center gap-1 font-medium">
+        <Users className="h-3 w-3 text-muted-foreground" />
+        {row.original.connectedFarmers.toLocaleString()}
+      </span>
     ),
   },
   {
     accessorKey: "createdAt",
     header: "Joined",
     cell: ({ row }) => (
-      <span className="text-muted-foreground">
+      <span className="text-muted-foreground text-xs">
         {formatTableDate(row.original.createdAt)}
       </span>
     ),
   },
   {
     id: "actions",
-    header: "",
+    header: "Action",
     enableSorting: false,
     enableHiding: false,
     cell: ({ row }) => (
@@ -78,6 +96,23 @@ export const partnerColumns: ColumnDef<PartnerRow>[] = [
       </div>
     ),
   },
+  {
+    id: "contact",
+    header: "Contact",
+    enableSorting: false,
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2 text-muted-foreground">
+        {row.original.phone !== "-" && (
+          <a href={`tel:${row.original.phone}`} title={row.original.phone}>
+            <Phone className="h-3.5 w-3.5 hover:text-foreground transition-colors" />
+          </a>
+        )}
+        <a href={`mailto:${row.original.email}`} title={row.original.email}>
+          <Mail className="h-3.5 w-3.5 hover:text-foreground transition-colors" />
+        </a>
+      </div>
+    ),
+  },
 ]
 
 function getPartnerStatusVariant(status: string) {
@@ -88,21 +123,6 @@ function getPartnerStatusVariant(status: string) {
       return "outline" as const
     case "suspended":
       return "destructive" as const
-    default:
-      return "secondary" as const
-  }
-}
-
-function getVerificationVariant(status: string) {
-  switch (status) {
-    case "verified":
-      return "default" as const
-    case "pending_review":
-      return "outline" as const
-    case "rejected":
-      return "destructive" as const
-    case "unverified":
-      return "secondary" as const
     default:
       return "secondary" as const
   }

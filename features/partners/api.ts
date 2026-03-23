@@ -5,6 +5,7 @@ import type {
   PartnerRow,
   PartnerDetail,
   PartnerActivity,
+  PartnerCampaign,
 } from "./types"
 import type { DataTableQueryResult } from "@/lib/table/table-types"
 
@@ -85,11 +86,12 @@ function mapPartnerDTOToRow(dto: PartnerDTO): PartnerRow {
     id: dto.id,
     name: fullName || dto.name || dto.email,
     email: dto.email,
-    organization: dto.organization_name || "-",
     phone: dto.phone || "-",
-    accountStatus: dto.account_status ?? "active",
-    verificationStatus: dto.verification_status ?? "unverified",
+    category: dto.category || "-",
     partnerStatus: dto.partner_status || "pending_activation",
+    location: dto.location || "-",
+    campaignCount: dto.campaign_count ?? 0,
+    connectedFarmers: dto.connected_farmers ?? 0,
     createdAt: dto.created_at,
   }
 }
@@ -137,6 +139,8 @@ export type UpdatePartnerData = {
   last_name?: string
   phone?: string
   organization_name?: string
+  category?: string
+  location?: string
   language?: string
   account_status?: string
   verification_status?: string
@@ -156,6 +160,27 @@ export async function updatePartner(
   return res.data
 }
 
+/* ── Create ── */
+
+export type CreatePartnerData = {
+  email: string
+  first_name: string
+  last_name: string
+  phone?: string
+  organization_name?: string
+  language?: string
+}
+
+export async function createPartner(
+  data: CreatePartnerData
+): Promise<Record<string, unknown>> {
+  const res = await api<ApiSuccessResponse<Record<string, unknown>>>(
+    "/v1/admin/partners/create",
+    { method: "POST", body: data }
+  )
+  return res.data
+}
+
 /* ── Delete ── */
 
 export async function deletePartner(
@@ -163,6 +188,73 @@ export async function deletePartner(
 ): Promise<{ deleted: boolean }> {
   const res = await api<ApiSuccessResponse<{ deleted: boolean }>>(
     `/v1/admin/partners/${partnerId}`,
+    { method: "DELETE" }
+  )
+  return res.data
+}
+
+/* ── Campaigns (all partners) ── */
+
+export type CampaignListItem = PartnerCampaign & {
+  partner_id: string
+  partner_name: string
+}
+
+type CampaignsResponse = {
+  campaigns: CampaignListItem[]
+  total: number
+}
+
+type GetCampaignsParams = {
+  pageIndex: number
+  pageSize: number
+  globalFilter: string
+  status?: string
+}
+
+export async function getCampaigns(
+  params: GetCampaignsParams
+): Promise<{ campaigns: CampaignListItem[]; total: number }> {
+  const searchParams = new URLSearchParams({
+    limit: String(params.pageSize),
+    offset: String(params.pageIndex * params.pageSize),
+  })
+  if (params.globalFilter) searchParams.set("search", params.globalFilter)
+  if (params.status) searchParams.set("status", params.status)
+
+  const res = await api<ApiSuccessResponse<CampaignsResponse>>(
+    `/v1/admin/campaigns?${searchParams}`
+  )
+  return res.data
+}
+
+/* ── Campaign CRUD ── */
+
+export type CreateCampaignData = {
+  partner_id: string
+  title: string
+  starts_at?: string
+  ends_at?: string
+  connected_farmers_target?: number
+  budget_minor?: number
+  currency?: string
+}
+
+export async function createCampaign(
+  data: CreateCampaignData
+): Promise<PartnerCampaign> {
+  const res = await api<ApiSuccessResponse<PartnerCampaign>>(
+    "/v1/admin/campaigns",
+    { method: "POST", body: data }
+  )
+  return res.data
+}
+
+export async function deleteCampaign(
+  campaignId: string
+): Promise<{ deleted: boolean }> {
+  const res = await api<ApiSuccessResponse<{ deleted: boolean }>>(
+    `/v1/admin/campaigns/${campaignId}`,
     { method: "DELETE" }
   )
   return res.data

@@ -14,17 +14,22 @@ export type PartnerDTO = {
   phone: string | null
   organization_name: string | null
   partner_status: string | null
+  category: string | null
+  location: string | null
+  campaign_count: number | null
+  connected_farmers: number | null
 }
 
 export type PartnerRow = {
   id: string
   name: string
   email: string
-  organization: string
   phone: string
-  accountStatus: AccountStatus
-  verificationStatus: VerificationStatus
+  category: string
   partnerStatus: string
+  location: string
+  campaignCount: number
+  connectedFarmers: number
   createdAt: string
 }
 

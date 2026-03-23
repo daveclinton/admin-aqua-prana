@@ -615,6 +615,8 @@ function EditPartnerSheet({
   const [lastName, setLastName] = useState(partner.last_name ?? "")
   const [phone, setPhone] = useState(partner.phone ?? "")
   const [orgName, setOrgName] = useState(partner.organization_name ?? "")
+  const [category, setCategory] = useState((partner as Record<string, unknown>).category as string ?? "general")
+  const [location, setLocation] = useState((partner as Record<string, unknown>).location as string ?? "")
   const [language, setLanguage] = useState(partner.language ?? "")
   const [verificationStatus, setVerificationStatus] = useState(partner.verification_status)
   const [accountStatus, setAccountStatus] = useState(partner.account_status)
@@ -626,6 +628,8 @@ function EditPartnerSheet({
       setLastName(partner.last_name ?? "")
       setPhone(partner.phone ?? "")
       setOrgName(partner.organization_name ?? "")
+      setCategory((partner as Record<string, unknown>).category as string ?? "general")
+      setLocation((partner as Record<string, unknown>).location as string ?? "")
       setLanguage(partner.language ?? "")
       setVerificationStatus(partner.verification_status)
       setAccountStatus(partner.account_status)
@@ -640,6 +644,8 @@ function EditPartnerSheet({
       last_name: lastName || undefined,
       phone: phone || undefined,
       organization_name: orgName || undefined,
+      category: category || undefined,
+      location: location || undefined,
       language: language || undefined,
       verification_status: verificationStatus !== partner.verification_status ? verificationStatus : undefined,
       account_status: accountStatus !== partner.account_status ? accountStatus : undefined,
@@ -667,6 +673,27 @@ function EditPartnerSheet({
           </FormField>
           <FormField label="Organization">
             <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} />
+          </FormField>
+          <FormField label="Category">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="general">General</option>
+              <option value="feed_supplier">Feed Supplier</option>
+              <option value="equipment">Equipment</option>
+              <option value="chemicals">Chemicals</option>
+              <option value="hatchery">Hatchery</option>
+              <option value="processor">Processor</option>
+              <option value="exporter">Exporter</option>
+              <option value="consultant">Consultant</option>
+              <option value="financial">Financial Services</option>
+              <option value="technology">Technology</option>
+            </select>
+          </FormField>
+          <FormField label="Location">
+            <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Chennai, Tamil Nadu" />
           </FormField>
           <FormField label="Language">
             <select
