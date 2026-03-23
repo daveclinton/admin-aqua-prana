@@ -12,7 +12,11 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
-import { createConversation, streamCompletion } from "@/features/aquagpt/api"
+import {
+  createConversation,
+  streamCompletion,
+  classifyConversationTopic,
+} from "@/features/aquagpt/api"
 
 type Message = {
   id: string
@@ -94,7 +98,11 @@ export function AskAiDrawer({ open, onOpenChange }: AskAiDrawerProps) {
             )
           )
         },
-        () => setIsStreaming(false),
+        () => {
+          setIsStreaming(false)
+          // Fire-and-forget: classify the conversation topic
+          classifyConversationTopic(convId, trimmed).catch(() => {})
+        },
         (error) => {
           setMessages((prev) =>
             prev.map((m) =>

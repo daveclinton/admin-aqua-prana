@@ -81,5 +81,10 @@ export const queryKeys = {
   aquagpt: {
     usage: (params?: Record<string, unknown>) =>
       ["aquagpt", "usage", params] as const,
+    modelStatus: ["aquagpt", "model-status"] as const,
+    accuracy: (range?: string) => ["aquagpt", "accuracy", range] as const,
+    chats: (params?: Record<string, unknown>) =>
+      ["aquagpt", "chats", params] as const,
+    topics: (range?: string) => ["aquagpt", "topics", range] as const,
   },
 } as const

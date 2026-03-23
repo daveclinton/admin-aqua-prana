@@ -2,6 +2,11 @@ import { api } from "@/lib/api/client"
 import type { ApiSuccessResponse } from "@/types/auth"
 import type {
   AquagptAnalytics,
+  AccuracyTrend,
+  ModelStatus,
+  ChatDTO,
+  ChatRow,
+  TopicClusteringData,
   UsageLogDTO,
   UsageLogRow,
   UsageSummary,
@@ -25,6 +30,86 @@ export async function getAquagptAnalytics(
     summary: res.data.summary,
     daily: res.data.daily_usage,
   }
+}
+
+/* ── Accuracy trend ── */
+
+export async function getAccuracyTrend(
+  range: string = "7d"
+): Promise<AccuracyTrend> {
+  const res = await api<ApiSuccessResponse<AccuracyTrend>>(
+    `/v1/admin/aquagpt/accuracy?range=${range}`
+  )
+  return res.data
+}
+
+/* ── Model status ── */
+
+export async function getModelStatus(): Promise<ModelStatus> {
+  const res = await api<ApiSuccessResponse<ModelStatus>>(
+    "/v1/admin/aquagpt/model-status"
+  )
+  return res.data
+}
+
+/* ── Chats table ── */
+
+type ChatsResponse = {
+  chats: ChatDTO[]
+  total: number
+}
+
+type GetChatsParams = {
+  pageIndex: number
+  pageSize: number
+  globalFilter: string
+}
+
+export async function getAquagptChats(
+  params: GetChatsParams
+): Promise<DataTableQueryResult<ChatRow>> {
+  const searchParams = new URLSearchParams({
+    limit: String(params.pageSize),
+    offset: String(params.pageIndex * params.pageSize),
+  })
+
+  if (params.globalFilter) {
+    searchParams.set("search", params.globalFilter)
+  }
+
+  const res = await api<ApiSuccessResponse<ChatsResponse>>(
+    `/v1/admin/aquagpt/chats?${searchParams}`
+  )
+
+  const rows = res.data.chats.map(mapChatToRow)
+  const pageCount = Math.max(1, Math.ceil(res.data.total / params.pageSize))
+
+  return { rows, rowCount: res.data.total, pageCount }
+}
+
+function mapChatToRow(dto: ChatDTO): ChatRow {
+  return {
+    id: dto.id,
+    userId: dto.user_id,
+    chatId: dto.conversation_id,
+    topic: dto.topic || "-",
+    messages: dto.message_count,
+    lastActive: dto.last_active,
+    accuracy: dto.accuracy,
+    rating: dto.rating,
+    escalated: dto.escalated,
+  }
+}
+
+/* ── Topic clustering ── */
+
+export async function getTopicClustering(
+  range: string = "7d"
+): Promise<TopicClusteringData> {
+  const res = await api<ApiSuccessResponse<TopicClusteringData>>(
+    `/v1/admin/aquagpt/topics?range=${range}`
+  )
+  return res.data
 }
 
 /* ── Usage logs ── */
@@ -163,4 +248,55 @@ export function streamCompletion(
     })
 
   return () => controller.abort()
+}
+
+/* ── Topic classification ── */
+
+/**
+ * Predefined topic categories for aquaculture conversations.
+ * The backend should use this same list in its classification prompt.
+ */
+export const TOPIC_CATEGORIES = [
+  "DO / Oxygen Issues",
+  "White Spot Disease",
+  "Feed Rate Optimisation",
+  "pH Correction",
+  "Stock Density",
+  "Mortality Events",
+  "Probiotic Usage",
+  "Water Quality",
+  "Harvest",
+  "Pond Management",
+  "Equipment",
+  "General",
+] as const
+
+export type TopicCategory = (typeof TOPIC_CATEGORIES)[number]
+
+/**
+ * Classifies a user message into a topic and saves it on the conversation.
+ * Fire-and-forget — failures are silently ignored.
+ *
+ * Calls POST /v1/chat/{id}/classify which should:
+ * 1. Send the message + categories to the LLM
+ * 2. Save the classified topic on the conversation row
+ */
+export async function classifyConversationTopic(
+  conversationId: string,
+  userMessage: string
+): Promise<void> {
+  try {
+    await api<ApiSuccessResponse<{ topic: string }>>(
+      `/v1/chat/${conversationId}/classify`,
+      {
+        method: "POST",
+        body: {
+          message: userMessage,
+          categories: TOPIC_CATEGORIES,
+        },
+      }
+    )
+  } catch {
+    // Classification endpoint not available — skip silently
+  }
 }
