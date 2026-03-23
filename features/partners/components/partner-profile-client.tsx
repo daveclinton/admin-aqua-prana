@@ -20,11 +20,13 @@ import {
   Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
+import { SearchableInput } from "@/components/shared/searchable-input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -67,6 +69,14 @@ import type {
 } from "@/features/partners/types"
 import { formatTableDate } from "@/lib/table/table-utils"
 import { cn } from "@/lib/utils"
+import {
+  PARTNER_CATEGORY_OPTIONS,
+  PARTNER_COUNTRY_OPTIONS,
+  formatPartnerLocation,
+  getPartnerRegions,
+  parsePartnerLocation,
+} from "@/lib/constants/admin-form-options"
+import { isValidPhoneNumber, normalizePhoneValue } from "@/lib/phone"
 
 function getInitials(p: PartnerDetail): string {
   const first = p.first_name?.[0] ?? ""
@@ -611,12 +621,14 @@ function EditPartnerSheet({
   onSave: (data: UpdatePartnerData) => void
   isPending: boolean
 }) {
+  const initialLocation = parsePartnerLocation((partner as Record<string, unknown>).location as string | undefined)
   const [firstName, setFirstName] = useState(partner.first_name ?? "")
   const [lastName, setLastName] = useState(partner.last_name ?? "")
-  const [phone, setPhone] = useState(partner.phone ?? "")
+  const [phone, setPhone] = useState(normalizePhoneValue(partner.phone))
   const [orgName, setOrgName] = useState(partner.organization_name ?? "")
   const [category, setCategory] = useState((partner as Record<string, unknown>).category as string ?? "general")
-  const [location, setLocation] = useState((partner as Record<string, unknown>).location as string ?? "")
+  const [country, setCountry] = useState(initialLocation.country)
+  const [region, setRegion] = useState(initialLocation.region)
   const [language, setLanguage] = useState(partner.language ?? "")
   const [verificationStatus, setVerificationStatus] = useState(partner.verification_status)
   const [accountStatus, setAccountStatus] = useState(partner.account_status)
@@ -624,12 +636,14 @@ function EditPartnerSheet({
   // Reset form when partner data changes
   const handleOpen = (isOpen: boolean) => {
     if (isOpen) {
+      const nextLocation = parsePartnerLocation((partner as Record<string, unknown>).location as string | undefined)
       setFirstName(partner.first_name ?? "")
       setLastName(partner.last_name ?? "")
-      setPhone(partner.phone ?? "")
+      setPhone(normalizePhoneValue(partner.phone))
       setOrgName(partner.organization_name ?? "")
       setCategory((partner as Record<string, unknown>).category as string ?? "general")
-      setLocation((partner as Record<string, unknown>).location as string ?? "")
+      setCountry(nextLocation.country)
+      setRegion(nextLocation.region)
       setLanguage(partner.language ?? "")
       setVerificationStatus(partner.verification_status)
       setAccountStatus(partner.account_status)
@@ -639,6 +653,8 @@ function EditPartnerSheet({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!isValidPhoneNumber(phone)) { toast.error("Phone number must contain 10 to 15 digits"); return }
+    const location = formatPartnerLocation(country, region)
     onSave({
       first_name: firstName || undefined,
       last_name: lastName || undefined,
@@ -669,7 +685,13 @@ function EditPartnerSheet({
             <Input value={lastName} onChange={(e) => setLastName(e.target.value)} />
           </FormField>
           <FormField label="Phone">
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <PhoneInput
+              value={phone}
+              onChange={(value) => setPhone(value || "")}
+              defaultCountry="IN"
+              international
+              placeholder="Enter a phone number"
+            />
           </FormField>
           <FormField label="Organization">
             <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} />
@@ -680,21 +702,40 @@ function EditPartnerSheet({
               onChange={(e) => setCategory(e.target.value)}
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <option value="general">General</option>
-              <option value="feed_supplier">Feed Supplier</option>
-              <option value="equipment">Equipment</option>
-              <option value="chemicals">Chemicals</option>
-              <option value="hatchery">Hatchery</option>
-              <option value="processor">Processor</option>
-              <option value="exporter">Exporter</option>
-              <option value="consultant">Consultant</option>
-              <option value="financial">Financial Services</option>
-              <option value="technology">Technology</option>
+              {PARTNER_CATEGORY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
             </select>
           </FormField>
-          <FormField label="Location">
-            <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Chennai, Tamil Nadu" />
-          </FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Country">
+              <select
+                value={country}
+                onChange={(e) => {
+                  const nextCountry = e.target.value
+                  setCountry(nextCountry)
+                  if (region && !getPartnerRegions(nextCountry).includes(region)) {
+                    setRegion("")
+                  }
+                }}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">Select country</option>
+                {PARTNER_COUNTRY_OPTIONS.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="State / Region">
+              <SearchableInput
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+                placeholder={country ? "Select or search region" : "Choose country first"}
+                disabled={!country}
+                options={getPartnerRegions(country).map((option) => ({ value: option }))}
+              />
+            </FormField>
+          </div>
           <FormField label="Language">
             <select
               value={language}

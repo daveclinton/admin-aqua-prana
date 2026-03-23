@@ -12,12 +12,14 @@ import {
 import { useMemo } from "react"
 import { useQueryStates } from "nuqs"
 import { toast } from "sonner"
+import { SearchableInput } from "@/components/shared/searchable-input"
 import { DataTable } from "@/components/table/data-table"
 import { DataTableToolbar } from "@/components/table/data-table-toolbar"
 import { KpiCard } from "@/components/dashboard/kpi-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
 import {
   Sheet,
   SheetContent,
@@ -42,6 +44,8 @@ import {
   parseSortingState,
 } from "@/lib/table/table-search-params"
 import { getSortingValue, resolveUpdater } from "@/lib/table/table-utils"
+import { FARMER_REGION_OPTIONS } from "@/lib/constants/admin-form-options"
+import { isValidPhoneNumber } from "@/lib/phone"
 
 const farmersTableSearchParams = createTableSearchParams({
   defaultPageSize: 10,
@@ -283,6 +287,7 @@ function AddFarmerSheet({
     if (!email.trim()) { toast.error("Email is required"); return }
     if (!firstName.trim()) { toast.error("First name is required"); return }
     if (!lastName.trim()) { toast.error("Last name is required"); return }
+    if (!isValidPhoneNumber(phone)) { toast.error("Phone number must contain 10 to 15 digits"); return }
     onSave({
       email: email.trim(),
       first_name: firstName.trim(),
@@ -314,10 +319,21 @@ function AddFarmerSheet({
             </FormField>
           </div>
           <FormField label="Phone">
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" />
+            <PhoneInput
+              value={phone}
+              onChange={(value) => setPhone(value || "")}
+              defaultCountry="IN"
+              international
+              placeholder="Enter a phone number"
+            />
           </FormField>
           <FormField label="Region">
-            <Input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="e.g. Andhra Pradesh" />
+            <SearchableInput
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              placeholder="Select or search region"
+              options={FARMER_REGION_OPTIONS.map((option) => ({ value: option }))}
+            />
           </FormField>
           <FormField label="Organization">
             <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="e.g. Aqua Farms Ltd" />

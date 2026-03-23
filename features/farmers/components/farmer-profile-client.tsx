@@ -22,11 +22,13 @@ import {
   Plus,
 } from "lucide-react"
 import { toast } from "sonner"
+import { SearchableInput } from "@/components/shared/searchable-input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -73,6 +75,8 @@ import type {
 } from "@/features/farmers/types"
 import { formatTableDate } from "@/lib/table/table-utils"
 import { cn } from "@/lib/utils"
+import { FARMER_REGION_OPTIONS } from "@/lib/constants/admin-form-options"
+import { isValidPhoneNumber, normalizePhoneValue } from "@/lib/phone"
 
 function getInitials(farmer: FarmerDetail): string {
   const first = farmer.first_name?.[0] ?? ""
@@ -597,7 +601,7 @@ function EditFarmerSheet({
 }) {
   const [firstName, setFirstName] = useState(farmer.first_name ?? "")
   const [lastName, setLastName] = useState(farmer.last_name ?? "")
-  const [phone, setPhone] = useState(farmer.phone ?? "")
+  const [phone, setPhone] = useState(normalizePhoneValue(farmer.phone))
   const [region, setRegion] = useState((farmer as Record<string, unknown>).region as string ?? "")
   const [orgName, setOrgName] = useState(farmer.organization_name ?? "")
   const [language, setLanguage] = useState(farmer.language ?? "")
@@ -608,7 +612,7 @@ function EditFarmerSheet({
     if (isOpen) {
       setFirstName(farmer.first_name ?? "")
       setLastName(farmer.last_name ?? "")
-      setPhone(farmer.phone ?? "")
+      setPhone(normalizePhoneValue(farmer.phone))
       setRegion((farmer as Record<string, unknown>).region as string ?? "")
       setOrgName(farmer.organization_name ?? "")
       setLanguage(farmer.language ?? "")
@@ -620,10 +624,11 @@ function EditFarmerSheet({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!isValidPhoneNumber(phone)) { toast.error("Phone number must contain 10 to 15 digits"); return }
     const data: UpdateFarmerData = {}
     if (firstName !== (farmer.first_name ?? "")) data.first_name = firstName || undefined
     if (lastName !== (farmer.last_name ?? "")) data.last_name = lastName || undefined
-    if (phone !== (farmer.phone ?? "")) data.phone = phone || undefined
+    if (phone !== normalizePhoneValue(farmer.phone)) data.phone = phone || undefined
     if (region !== ((farmer as Record<string, unknown>).region as string ?? "")) data.region = region || undefined
     if (orgName !== (farmer.organization_name ?? "")) data.organization_name = orgName || undefined
     if (language !== (farmer.language ?? "")) data.language = language || undefined
@@ -648,10 +653,21 @@ function EditFarmerSheet({
             <Input value={lastName} onChange={(e) => setLastName(e.target.value)} />
           </FormField>
           <FormField label="Phone">
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <PhoneInput
+              value={phone}
+              onChange={(value) => setPhone(value || "")}
+              defaultCountry="IN"
+              international
+              placeholder="Enter a phone number"
+            />
           </FormField>
           <FormField label="Region">
-            <Input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="e.g. Andhra Pradesh" />
+            <SearchableInput
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              placeholder="Select or search region"
+              options={FARMER_REGION_OPTIONS.map((option) => ({ value: option }))}
+            />
           </FormField>
           <FormField label="Organization">
             <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} />

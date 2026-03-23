@@ -248,10 +248,10 @@ function OrderDetailSheet({
                 <DetailRow label="Seller" value={String(o.seller_name || o.seller_email)} />
                 <DetailRow label="Total" value={`₹${Number(o.total).toLocaleString()}`} />
                 <DetailRow label="Placed" value={formatTableDate(String(o.placed_at))} />
-                {o.shipping_address && (
+                {Boolean(o.shipping_address) && (
                   <DetailRow label="Shipping" value={String(o.shipping_address)} />
                 )}
-                {o.notes && <DetailRow label="Notes" value={String(o.notes)} />}
+                {Boolean(o.notes) && <DetailRow label="Notes" value={String(o.notes)} />}
               </div>
 
               {/* Items */}

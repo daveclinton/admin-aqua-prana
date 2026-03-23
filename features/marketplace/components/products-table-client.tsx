@@ -13,6 +13,7 @@ import { useMemo } from "react"
 import { useQueryStates } from "nuqs"
 import { toast } from "sonner"
 import { Plus } from "lucide-react"
+import { SearchableInput } from "@/components/shared/searchable-input"
 import { DataTable } from "@/components/table/data-table"
 import { DataTableToolbar } from "@/components/table/data-table-toolbar"
 import { Button } from "@/components/ui/button"
@@ -53,6 +54,7 @@ import {
   parseSortingState,
 } from "@/lib/table/table-search-params"
 import { getSortingValue, resolveUpdater } from "@/lib/table/table-utils"
+import { PRODUCT_CATEGORY_OPTIONS } from "@/lib/constants/admin-form-options"
 
 const productsSearchParams = createTableSearchParams({
   defaultPageSize: 10,
@@ -262,14 +264,22 @@ function ProductFormSheet({
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSave: (data: CreateProductData | UpdateProductData) => void
   isPending: boolean
   title: string
   description: string
   defaults?: ProductRow
-  isEdit?: boolean
-}) {
+} & (
+  | {
+      isEdit?: false
+      onSave: (data: CreateProductData) => void
+    }
+  | {
+      isEdit: true
+      onSave: (data: UpdateProductData) => void
+    }
+)) {
   const [sellerId, setSellerId] = useState("")
+  const [sellerSearch, setSellerSearch] = useState("")
   const [name, setName] = useState("")
   const [category, setCategory] = useState("")
   const [price, setPrice] = useState("")
@@ -290,6 +300,7 @@ function ProductFormSheet({
       setStock(defaults?.stock?.toString() ?? "")
       setStatus(defaults?.status ?? "active")
       setSellerId("")
+      setSellerSearch("")
     }
     onOpenChange(isOpen)
   }
@@ -300,16 +311,35 @@ function ProductFormSheet({
     if (!price || Number(price) <= 0) { toast.error("Price must be positive"); return }
     if (!isEdit && !sellerId) { toast.error("Select a seller"); return }
 
-    const data: Record<string, unknown> = {
+    const baseData: UpdateProductData = {
       name: name.trim(),
-      category: category.trim() || "general",
+      category: category.trim() || "Feed",
       price: Math.round(Number(price)),
       stock: parseInt(stock || "0", 10),
       status,
     }
-    if (!isEdit) data.seller_id = sellerId
-    onSave(data as CreateProductData | UpdateProductData)
+    if (isEdit) {
+      onSave(baseData)
+      return
+    }
+
+    onSave({
+      seller_id: sellerId,
+      name: name.trim(),
+      category: category.trim() || "Feed",
+      price: Math.round(Number(price)),
+      stock: parseInt(stock || "0", 10),
+      status,
+    })
   }
+
+  const sellerOptions = (sellers ?? []).map((seller) => {
+    const label = seller.seller_name?.trim() || seller.seller_email
+    return {
+      id: seller.seller_id,
+      value: `${label} (${seller.seller_email})`,
+    }
+  })
 
   return (
     <Sheet open={open} onOpenChange={handleOpen}>
@@ -321,23 +351,29 @@ function ProductFormSheet({
         <form onSubmit={handleSubmit} className="space-y-4 p-6 pt-2">
           {!isEdit && (
             <FormField label="Seller *">
-              <select
-                value={sellerId}
-                onChange={(e) => setSellerId(e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-              >
-                <option value="">Select seller</option>
-                {(sellers ?? []).map((s) => (
-                  <option key={s.seller_id} value={s.seller_id}>{s.seller_name}</option>
-                ))}
-              </select>
+              <SearchableInput
+                value={sellerSearch}
+                onChange={(e) => {
+                  const nextValue = e.target.value
+                  setSellerSearch(nextValue)
+                  const selectedSeller = sellerOptions.find((option) => option.value === nextValue)
+                  setSellerId(selectedSeller?.id ?? "")
+                }}
+                placeholder="Search seller by name or email"
+                options={sellerOptions.map((option) => ({ value: option.value }))}
+              />
             </FormField>
           )}
           <FormField label="Product name *">
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Fish Feed 50kg" />
           </FormField>
           <FormField label="Category">
-            <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Feed, Aeration, Chemical" />
+            <SearchableInput
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="Select or type a category"
+              options={PRODUCT_CATEGORY_OPTIONS.map((option) => ({ value: option }))}
+            />
           </FormField>
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Price (₹) *">
