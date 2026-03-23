@@ -13,9 +13,77 @@ export type PassbookStats = {
   unique_ponds: number
 }
 
+export type PassbookMonitoringSummary = {
+  overview: {
+    total_ponds: number
+    mapped_ponds: number
+    total_unresolved_alerts: number
+    critical_alerts: number
+    avg_overall_score: number
+    critical_score_ponds: number
+    low_confidence_ponds: number
+    recent_passbook_entries: number
+    mortality_reports_24h: number
+  }
+  parameter_alerts: Array<{
+    parameter: string
+    label: string
+    total: number
+    critical: number
+    warning: number
+  }>
+  score_bands: {
+    excellent: number
+    good: number
+    fair: number
+    poor: number
+    critical: number
+    unknown: number
+  }
+  regional_breakdown: Array<{
+    region: string
+    pond_count: number
+    active_alerts: number
+    critical_alerts: number
+    healthy_ponds: number
+    avg_score: number
+  }>
+  map_points: Array<{
+    id: string
+    name: string
+    latitude: number
+    longitude: number
+    region: string
+    overall: number | null
+    confidence: number | null
+    band: string
+    active_alerts: number
+    critical_alerts: number
+  }>
+  missing_data: Array<{
+    parameter: string
+    label: string
+    count: number
+  }>
+  irregular_flags: {
+    data_gaps: number
+    critical_score_ponds: number
+    low_confidence_ponds: number
+    mortality_reports_24h: number
+  }
+  generated_at: string
+}
+
 export async function getPassbookStats(): Promise<PassbookStats> {
   const res = await api<ApiSuccessResponse<PassbookStats>>(
     "/v1/admin/passbook/stats"
+  )
+  return res.data
+}
+
+export async function getPassbookMonitoringSummary(): Promise<PassbookMonitoringSummary> {
+  const res = await api<ApiSuccessResponse<PassbookMonitoringSummary>>(
+    "/v1/admin/passbook/monitoring"
   )
   return res.data
 }

@@ -12,12 +12,25 @@ import {
 import { useMemo } from "react"
 import { useQueryStates } from "nuqs"
 import { toast } from "sonner"
-import { Plus } from "lucide-react"
+import { CheckIcon, ChevronsUpDown, Plus } from "lucide-react"
 import { SearchableInput } from "@/components/shared/searchable-input"
 import { DataTable } from "@/components/table/data-table"
 import { DataTableToolbar } from "@/components/table/data-table-toolbar"
 import { Button } from "@/components/ui/button"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { Input } from "@/components/ui/input"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   Sheet,
   SheetContent,
@@ -279,7 +292,7 @@ function ProductFormSheet({
     }
 )) {
   const [sellerId, setSellerId] = useState("")
-  const [sellerSearch, setSellerSearch] = useState("")
+  const [sellerOpen, setSellerOpen] = useState(false)
   const [name, setName] = useState("")
   const [category, setCategory] = useState("")
   const [price, setPrice] = useState("")
@@ -300,7 +313,7 @@ function ProductFormSheet({
       setStock(defaults?.stock?.toString() ?? "")
       setStatus(defaults?.status ?? "active")
       setSellerId("")
-      setSellerSearch("")
+      setSellerOpen(false)
     }
     onOpenChange(isOpen)
   }
@@ -337,9 +350,12 @@ function ProductFormSheet({
     const label = seller.seller_name?.trim() || seller.seller_email
     return {
       id: seller.seller_id,
+      label,
+      email: seller.seller_email,
       value: `${label} (${seller.seller_email})`,
     }
   })
+  const selectedSeller = sellerOptions.find((seller) => seller.id === sellerId)
 
   return (
     <Sheet open={open} onOpenChange={handleOpen}>
@@ -351,17 +367,51 @@ function ProductFormSheet({
         <form onSubmit={handleSubmit} className="space-y-4 p-6 pt-2">
           {!isEdit && (
             <FormField label="Seller *">
-              <SearchableInput
-                value={sellerSearch}
-                onChange={(e) => {
-                  const nextValue = e.target.value
-                  setSellerSearch(nextValue)
-                  const selectedSeller = sellerOptions.find((option) => option.value === nextValue)
-                  setSellerId(selectedSeller?.id ?? "")
-                }}
-                placeholder="Search seller by name or email"
-                options={sellerOptions.map((option) => ({ value: option.value }))}
-              />
+              <Popover open={sellerOpen} onOpenChange={setSellerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={sellerOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className="truncate">
+                      {selectedSeller ? selectedSeller.value : "Search and select seller"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search seller by name or email..." />
+                    <CommandList>
+                      <CommandEmpty>No seller found.</CommandEmpty>
+                      <CommandGroup>
+                        {sellerOptions.map((seller) => (
+                          <CommandItem
+                            key={seller.id}
+                            value={`${seller.label} ${seller.email}`}
+                            onSelect={() => {
+                              setSellerId(seller.id)
+                              setSellerOpen(false)
+                            }}
+                            className="gap-2"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-sm">{seller.label}</div>
+                              <div className="truncate text-xs text-muted-foreground">{seller.email}</div>
+                            </div>
+                            <CheckIcon
+                              className={selectedSeller?.id === seller.id ? "size-4 opacity-100" : "size-4 opacity-0"}
+                            />
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </FormField>
           )}
           <FormField label="Product name *">

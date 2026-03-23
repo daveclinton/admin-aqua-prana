@@ -79,6 +79,7 @@ export const queryKeys = {
       ["passbook", "entries", params] as const,
     summary: ["passbook", "summary"] as const,
     stats: ["passbook", "stats"] as const,
+    monitoring: ["passbook", "monitoring"] as const,
   },
   aquagpt: {
     usage: (params?: Record<string, unknown>) =>

@@ -4,10 +4,23 @@ import { useState } from "react"
 import { useQueryState, parseAsStringLiteral } from "nuqs"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { Plus, Megaphone, Trash2 } from "lucide-react"
+import { CheckIcon, ChevronsUpDown, Plus, Megaphone, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { Input } from "@/components/ui/input"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -217,6 +230,7 @@ function AddCampaignSheet({
   isPending: boolean
 }) {
   const [partnerId, setPartnerId] = useState("")
+  const [partnerOpen, setPartnerOpen] = useState(false)
   const [title, setTitle] = useState("")
   const [startsAt, setStartsAt] = useState("")
   const [endsAt, setEndsAt] = useState("")
@@ -235,6 +249,7 @@ function AddCampaignSheet({
   const handleOpen = (isOpen: boolean) => {
     if (isOpen) {
       setPartnerId("")
+      setPartnerOpen(false)
       setTitle("")
       setStartsAt("")
       setEndsAt("")
@@ -260,6 +275,14 @@ function AddCampaignSheet({
     })
   }
 
+  const partnerOptions = partners.map((partner) => ({
+    id: partner.id,
+    name: partner.name,
+    email: partner.email,
+    value: `${partner.name} (${partner.email})`,
+  }))
+  const selectedPartner = partnerOptions.find((partner) => partner.id === partnerId)
+
   return (
     <Sheet open={open} onOpenChange={handleOpen}>
       <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
@@ -269,16 +292,51 @@ function AddCampaignSheet({
         </SheetHeader>
         <form onSubmit={handleSubmit} className="space-y-4 p-6 pt-2">
           <FormField label="Partner *">
-            <select
-              value={partnerId}
-              onChange={(e) => setPartnerId(e.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              <option value="">Select partner</option>
-              {partners.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+            <Popover open={partnerOpen} onOpenChange={setPartnerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={partnerOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  <span className="truncate">
+                    {selectedPartner ? selectedPartner.value : "Search and select partner"}
+                  </span>
+                  <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search partner by name or email..." />
+                  <CommandList>
+                    <CommandEmpty>No partner found.</CommandEmpty>
+                    <CommandGroup>
+                      {partnerOptions.map((partner) => (
+                        <CommandItem
+                          key={partner.id}
+                          value={`${partner.name} ${partner.email}`}
+                          onSelect={() => {
+                            setPartnerId(partner.id)
+                            setPartnerOpen(false)
+                          }}
+                          className="gap-2"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm">{partner.name}</div>
+                            <div className="truncate text-xs text-muted-foreground">{partner.email}</div>
+                          </div>
+                          <CheckIcon
+                            className={selectedPartner?.id === partner.id ? "size-4 opacity-100" : "size-4 opacity-0"}
+                          />
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </FormField>
           <FormField label="Campaign title *">
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Summer Outreach" />
