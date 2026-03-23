@@ -1,61 +1,92 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
-import { toast } from "sonner"
+import Link from "next/link"
+import { AlertTriangle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { DataTableRowActions } from "@/components/table/data-table-row-actions"
-import { formatTableDate } from "@/lib/table/table-utils"
 import type { FarmerRow } from "@/features/farmers/types"
 
 export const farmerColumns: ColumnDef<FarmerRow>[] = [
   {
     accessorKey: "name",
-    header: "Farmer",
+    header: "Name",
     cell: ({ row }) => (
-      <div className="space-y-0.5">
+      <Link href={`/farmers/${row.original.id}`} className="block space-y-0.5 hover:underline">
         <p className="font-medium text-foreground">{row.original.name}</p>
         <p className="text-xs text-muted-foreground">{row.original.email}</p>
-      </div>
+      </Link>
     ),
     enableHiding: false,
   },
   {
-    accessorKey: "phone",
-    header: "Phone",
+    accessorKey: "region",
+    header: "Region",
     cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.original.phone}</span>
+      <span className="text-muted-foreground">{row.original.region}</span>
+    ),
+  },
+  {
+    accessorKey: "plan",
+    header: "Plan",
+    cell: ({ row }) => (
+      <Badge variant="outline">{row.original.plan}</Badge>
+    ),
+  },
+  {
+    accessorKey: "species",
+    header: "Species",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">{row.original.species}</span>
+    ),
+  },
+  {
+    accessorKey: "pondCount",
+    header: "Ponds",
+    cell: ({ row }) => (
+      <span className="font-medium">{row.original.pondCount}</span>
+    ),
+  },
+  {
+    accessorKey: "avgPondScore",
+    header: "Avg Pondscore",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">{row.original.avgPondScore}</span>
+    ),
+  },
+  {
+    accessorKey: "alertCount",
+    header: "Alerts",
+    cell: ({ row }) => {
+      const count = row.original.alertCount
+      if (count === 0) return <span className="text-muted-foreground">0</span>
+      return (
+        <span className="inline-flex items-center gap-1 text-amber-600">
+          <AlertTriangle className="h-3 w-3" />
+          {count}
+        </span>
+      )
+    },
+  },
+  {
+    accessorKey: "lastLogin",
+    header: "Last Login",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground text-xs">{row.original.lastLogin}</span>
     ),
   },
   {
     accessorKey: "accountStatus",
-    header: "Account",
+    header: "Status",
     cell: ({ row }) => (
-      <Badge variant={getAccountVariant(row.original.accountStatus)}>
+      <Badge variant={getStatusVariant(row.original.accountStatus)}>
         {row.original.accountStatus}
       </Badge>
     ),
   },
   {
-    accessorKey: "verificationStatus",
-    header: "Verification",
-    cell: ({ row }) => (
-      <Badge variant={getVerificationVariant(row.original.verificationStatus)}>
-        {row.original.verificationStatus.replace("_", " ")}
-      </Badge>
-    ),
-  },
-  {
-    accessorKey: "createdAt",
-    header: "Joined",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">
-        {formatTableDate(row.original.createdAt)}
-      </span>
-    ),
-  },
-  {
     id: "actions",
-    header: "",
+    header: "Action",
     enableSorting: false,
     enableHiding: false,
     cell: ({ row }) => (
@@ -64,14 +95,7 @@ export const farmerColumns: ColumnDef<FarmerRow>[] = [
           actions={[
             {
               label: "View profile",
-              onClick: () =>
-                toast.info(`Open profile for ${row.original.name}`),
-            },
-            {
-              label: "Suspend account",
-              variant: "destructive",
-              onClick: () =>
-                toast.error(`Suspended ${row.original.name}`),
+              href: `/farmers/${row.original.id}`,
             },
           ]}
         />
@@ -80,7 +104,7 @@ export const farmerColumns: ColumnDef<FarmerRow>[] = [
   },
 ]
 
-function getAccountVariant(status: string) {
+function getStatusVariant(status: string) {
   switch (status) {
     case "active":
       return "default" as const
@@ -88,21 +112,6 @@ function getAccountVariant(status: string) {
       return "destructive" as const
     case "archived":
       return "outline" as const
-    default:
-      return "secondary" as const
-  }
-}
-
-function getVerificationVariant(status: string) {
-  switch (status) {
-    case "verified":
-      return "default" as const
-    case "pending_review":
-      return "outline" as const
-    case "rejected":
-      return "destructive" as const
-    case "unverified":
-      return "secondary" as const
     default:
       return "secondary" as const
   }

@@ -4,8 +4,7 @@ import {
   LayoutGrid,
   User,
   Users,
-  AlertTriangle,
-  DollarSign,
+  AlertTriangle
 } from "lucide-react"
 import { KpiCard } from "@/components/dashboard/kpi-card"
 import { PerformanceChart } from "@/components/dashboard/performance-chart"
@@ -43,7 +42,7 @@ export default function OverviewPage() {
       <SystemHealthBar />
 
       {/* KPI cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statsLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-[140px] rounded-2xl" />
@@ -76,15 +75,6 @@ export default function OverviewPage() {
               trend={trendLabel(stats.new_partners_7d, stats.new_partners_prev_7d)}
               subtitle={stats.new_partners_7d > 0 ? `${stats.new_partners_7d} new this week` : undefined}
               href="/partners"
-            />
-            <KpiCard
-              title="Revenue"
-              value={formatRevenue(stats.total_revenue)}
-              icon={DollarSign}
-              variant="green"
-              trend={trendLabel(stats.revenue_7d, stats.revenue_prev_7d)}
-              subtitle={stats.revenue_7d > 0 ? `${formatRevenue(stats.revenue_7d)} this week` : undefined}
-              href="/billing"
             />
             <KpiCard
               title="Critical Alerts"

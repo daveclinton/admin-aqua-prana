@@ -1,7 +1,7 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
-import { toast } from "sonner"
+import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { DataTableRowActions } from "@/components/table/data-table-row-actions"
 import { formatTableDate } from "@/lib/table/table-utils"
@@ -12,10 +12,13 @@ export const partnerColumns: ColumnDef<PartnerRow>[] = [
     accessorKey: "name",
     header: "Partner",
     cell: ({ row }) => (
-      <div className="space-y-0.5">
+      <Link
+        href={`/partners/${row.original.id}`}
+        className="block space-y-0.5 hover:underline"
+      >
         <p className="font-medium text-foreground">{row.original.name}</p>
         <p className="text-xs text-muted-foreground">{row.original.email}</p>
-      </div>
+      </Link>
     ),
     enableHiding: false,
   },
@@ -68,19 +71,7 @@ export const partnerColumns: ColumnDef<PartnerRow>[] = [
           actions={[
             {
               label: "View profile",
-              onClick: () =>
-                toast.info(`Open profile for ${row.original.name}`),
-            },
-            {
-              label: "Activate partner",
-              onClick: () =>
-                toast.success(`Activated ${row.original.name}`),
-            },
-            {
-              label: "Suspend partner",
-              variant: "destructive",
-              onClick: () =>
-                toast.error(`Suspended ${row.original.name}`),
+              href: `/partners/${row.original.id}`,
             },
           ]}
         />

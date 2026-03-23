@@ -12,11 +12,15 @@ export const queryKeys = {
   farmers: {
     all: (params?: Record<string, unknown>) => ["farmers", params] as const,
     detail: (id: string) => ["farmers", id] as const,
+    ponds: (id: string) => ["farmers", id, "ponds"] as const,
+    passbook: (id: string) => ["farmers", id, "passbook"] as const,
+    activity: (id: string) => ["farmers", id, "activity"] as const,
     stats: ["farmers", "stats"] as const,
   },
   partners: {
     all: (params?: Record<string, unknown>) => ["partners", params] as const,
     detail: (id: string) => ["partners", id] as const,
+    activity: (id: string) => ["partners", id, "activity"] as const,
     stats: ["partners", "stats"] as const,
   },
   marketplace: {

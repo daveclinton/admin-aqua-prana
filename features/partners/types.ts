@@ -27,3 +27,62 @@ export type PartnerRow = {
   partnerStatus: string
   createdAt: string
 }
+
+/* ── Detail types ── */
+
+export type PartnerDetail = {
+  id: string
+  email: string
+  name: string | null
+  first_name: string | null
+  middle_name: string | null
+  last_name: string | null
+  phone: string | null
+  image: string | null
+  role: string
+  account_status: AccountStatus
+  verification_status: VerificationStatus
+  partner_status: string | null
+  email_verified: boolean
+  organization_name: string | null
+  two_factor_enabled: boolean
+  legal_consent_accepted: boolean
+  language: string | null
+  created_at: string
+  updated_at: string
+  verification_profile: Record<string, unknown> | null
+  documents: PartnerDocument[]
+  campaigns: PartnerCampaign[]
+}
+
+export type PartnerDocument = {
+  id: string
+  doc_key: string
+  file_name: string
+  mime_type: string
+  size_bytes: number
+  file_url: string | null
+  status: string
+  created_at: string
+}
+
+export type PartnerCampaign = {
+  id: string
+  title: string
+  status: string
+  starts_at: string | null
+  ends_at: string | null
+  connected_farmers_target: number | null
+  budget_minor: number | null
+  currency: string | null
+  created_at: string
+}
+
+export type PartnerActivity = {
+  id: string
+  action: string
+  success: boolean
+  ip_address: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+}

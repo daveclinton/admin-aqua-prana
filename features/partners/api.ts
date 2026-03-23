@@ -1,6 +1,11 @@
 import { api } from "@/lib/api/client"
 import type { ApiSuccessResponse } from "@/types/auth"
-import type { PartnerDTO, PartnerRow } from "./types"
+import type {
+  PartnerDTO,
+  PartnerRow,
+  PartnerDetail,
+  PartnerActivity,
+} from "./types"
 import type { DataTableQueryResult } from "@/lib/table/table-types"
 
 /* ── Stats ── */
@@ -87,4 +92,78 @@ function mapPartnerDTOToRow(dto: PartnerDTO): PartnerRow {
     partnerStatus: dto.partner_status || "pending_activation",
     createdAt: dto.created_at,
   }
+}
+
+/* ── Detail ── */
+
+export async function getPartnerDetail(id: string): Promise<PartnerDetail> {
+  const res = await api<ApiSuccessResponse<PartnerDetail>>(
+    `/v1/admin/partners/${id}`
+  )
+  return res.data
+}
+
+/* ── Activity ── */
+
+export async function getPartnerActivity(
+  partnerId: string
+): Promise<PartnerActivity[]> {
+  const res = await api<
+    ApiSuccessResponse<{ activity: PartnerActivity[] }>
+  >(`/v1/admin/partners/${partnerId}/activity`)
+  return res.data.activity
+}
+
+/* ── Activate / Suspend ── */
+
+export async function updatePartnerStatus(
+  partnerId: string,
+  partnerStatus: "active" | "pending_activation" | "suspended"
+): Promise<PartnerDetail> {
+  const res = await api<ApiSuccessResponse<PartnerDetail>>(
+    `/v1/admin/partners/${partnerId}/activate`,
+    {
+      method: "PATCH",
+      body: { partner_status: partnerStatus },
+    }
+  )
+  return res.data
+}
+
+/* ── Edit ── */
+
+export type UpdatePartnerData = {
+  first_name?: string
+  last_name?: string
+  phone?: string
+  organization_name?: string
+  language?: string
+  account_status?: string
+  verification_status?: string
+}
+
+export async function updatePartner(
+  partnerId: string,
+  data: UpdatePartnerData
+): Promise<PartnerDetail> {
+  const res = await api<ApiSuccessResponse<PartnerDetail>>(
+    `/v1/admin/partners/${partnerId}`,
+    {
+      method: "PATCH",
+      body: data,
+    }
+  )
+  return res.data
+}
+
+/* ── Delete ── */
+
+export async function deletePartner(
+  partnerId: string
+): Promise<{ deleted: boolean }> {
+  const res = await api<ApiSuccessResponse<{ deleted: boolean }>>(
+    `/v1/admin/partners/${partnerId}`,
+    { method: "DELETE" }
+  )
+  return res.data
 }

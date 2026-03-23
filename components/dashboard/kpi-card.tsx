@@ -69,21 +69,17 @@ export function KpiCard({
   const styles = variantStyles[variant]
   const hasGradient = variant !== "default"
 
-  const Wrapper = href ? Link : "div"
-  const wrapperProps = href ? { href } : {}
+  const cardClassName = cn(
+    "relative block overflow-hidden rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5",
+    styles.card,
+    styles.shadow,
+    hasGradient ? "hover:shadow-[0_8px_28px_rgba(0,0,0,0.22)]" : "shadow-sm hover:shadow-md",
+    href && "cursor-pointer",
+    className
+  )
 
-  return (
-    <Wrapper
-      {...wrapperProps}
-      className={cn(
-        "relative block overflow-hidden rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5",
-        styles.card,
-        styles.shadow,
-        hasGradient ? "hover:shadow-[0_8px_28px_rgba(0,0,0,0.22)]" : "shadow-sm hover:shadow-md",
-        href && "cursor-pointer",
-        className
-      )}
-    >
+  const content = (
+    <>
       {/* Decorative circles on gradient tiles */}
       {hasGradient && (
         <>
@@ -118,6 +114,20 @@ export function KpiCard({
           </p>
         )}
       </div>
-    </Wrapper>
+    </>
+  )
+
+  if (href) {
+    return (
+      <Link href={href} className={cardClassName}>
+        {content}
+      </Link>
+    )
+  }
+
+  return (
+    <div className={cardClassName}>
+      {content}
+    </div>
   )
 }

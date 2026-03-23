@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { MoreHorizontal } from "lucide-react"
 import {
   DropdownMenu,
@@ -12,7 +13,8 @@ import { Button } from "@/components/ui/button"
 
 export type DataTableRowAction = {
   label: string
-  onClick: () => void
+  onClick?: () => void
+  href?: string
   variant?: "default" | "destructive"
 }
 
@@ -23,6 +25,8 @@ type DataTableRowActionsProps = {
 export function DataTableRowActions({
   actions,
 }: DataTableRowActionsProps) {
+  const router = useRouter()
+
   if (!actions.length) {
     return null
   }
@@ -45,7 +49,13 @@ export function DataTableRowActions({
             {index > 0 ? <DropdownMenuSeparator /> : null}
             <DropdownMenuItem
               variant={action.variant}
-              onClick={action.onClick}
+              onClick={() => {
+                if (action.href) {
+                  router.push(action.href)
+                } else if (action.onClick) {
+                  action.onClick()
+                }
+              }}
             >
               {action.label}
             </DropdownMenuItem>
