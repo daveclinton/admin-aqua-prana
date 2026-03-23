@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useQueryState, parseAsStringLiteral } from "nuqs"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { Plus, Megaphone, Trash2 } from "lucide-react"
@@ -62,7 +63,12 @@ function statusVariant(status: string) {
 
 export function CampaignsTable() {
   const queryClient = useQueryClient()
-  const [addOpen, setAddOpen] = useState(false)
+  const [action, setAction] = useQueryState(
+    "action",
+    parseAsStringLiteral(["add-partner", "add-campaign"] as const).withOptions({ history: "push" })
+  )
+  const addOpen = action === "add-campaign"
+  const setAddOpen = (open: boolean) => void setAction(open ? "add-campaign" : null)
   const [deleteTarget, setDeleteTarget] = useState<CampaignListItem | null>(null)
 
   const { data, isLoading } = useQuery({

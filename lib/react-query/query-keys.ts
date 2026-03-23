@@ -27,6 +27,7 @@ export const queryKeys = {
     all: (params?: Record<string, unknown>) => ["campaigns", params] as const,
   },
   marketplace: {
+    stats: ["marketplace", "stats"] as const,
     products: (params?: Record<string, unknown>) =>
       ["marketplace", "products", params] as const,
     productDetail: (id: string) =>
@@ -34,6 +35,7 @@ export const queryKeys = {
     orders: (params?: Record<string, unknown>) =>
       ["marketplace", "orders", params] as const,
     orderDetail: (id: string) => ["marketplace", "orders", id] as const,
+    sellers: ["marketplace", "sellers"] as const,
   },
   forum: {
     posts: (params?: Record<string, unknown>) =>

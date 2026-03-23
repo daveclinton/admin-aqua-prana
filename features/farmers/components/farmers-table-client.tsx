@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useQueryState, parseAsStringLiteral } from "nuqs"
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   type ColumnFiltersState,
@@ -55,7 +56,12 @@ const farmersTableSearchParams = createTableSearchParams({
 
 export function FarmersTableClient() {
   const queryClient = useQueryClient()
-  const [addOpen, setAddOpen] = useState(false)
+  const [action, setAction] = useQueryState(
+    "action",
+    parseAsStringLiteral(["add-farmer"] as const).withOptions({ history: "push" })
+  )
+  const addOpen = action === "add-farmer"
+  const setAddOpen = (open: boolean) => void setAction(open ? "add-farmer" : null)
 
   const [queryState, setQueryState] = useQueryStates(
     farmersTableSearchParams.parsers,

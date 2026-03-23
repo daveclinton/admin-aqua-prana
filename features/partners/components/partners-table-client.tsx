@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useQueryState, parseAsStringLiteral } from "nuqs"
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   type ColumnFiltersState,
@@ -55,7 +56,12 @@ const partnersTableSearchParams = createTableSearchParams({
 
 export function PartnersTableClient() {
   const queryClient = useQueryClient()
-  const [addOpen, setAddOpen] = useState(false)
+  const [action, setAction] = useQueryState(
+    "action",
+    parseAsStringLiteral(["add-partner", "add-campaign"] as const).withOptions({ history: "push" })
+  )
+  const addOpen = action === "add-partner"
+  const setAddOpen = (open: boolean) => void setAction(open ? "add-partner" : null)
   const [queryState, setQueryState] = useQueryStates(
     partnersTableSearchParams.parsers,
     {

@@ -1,53 +1,44 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
-import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
-import { DataTableRowActions } from "@/components/table/data-table-row-actions"
+import { Button } from "@/components/ui/button"
 import { formatTableDate } from "@/lib/table/table-utils"
 import type { OrderRow } from "@/features/marketplace/types"
 
 export const orderColumns: ColumnDef<OrderRow>[] = [
   {
     accessorKey: "id",
-    header: "Order ID",
+    header: "Order #",
     cell: ({ row }) => (
-      <span className="font-mono text-xs text-foreground">
-        {row.original.id.slice(0, 8)}…
+      <span className="font-mono text-xs font-medium">
+        #{row.original.id.slice(0, 6)}
       </span>
     ),
     enableHiding: false,
   },
   {
-    accessorKey: "buyerName",
-    header: "Buyer",
+    accessorKey: "details",
+    header: "Details",
     cell: ({ row }) => (
-      <div className="space-y-0.5">
-        <p className="text-foreground">{row.original.buyerName}</p>
-        <p className="text-xs text-muted-foreground">
-          {row.original.buyerEmail}
-        </p>
-      </div>
+      <span className="text-foreground">{row.original.details}</span>
     ),
   },
   {
-    accessorKey: "sellerName",
-    header: "Seller",
+    accessorKey: "amount",
+    header: "Amount",
     cell: ({ row }) => (
-      <div className="space-y-0.5">
-        <p className="text-foreground">{row.original.sellerName}</p>
-        <p className="text-xs text-muted-foreground">
-          {row.original.sellerEmail}
-        </p>
-      </div>
+      <span className="tabular-nums font-medium">
+        ₹{row.original.amount.toLocaleString()}
+      </span>
     ),
   },
   {
-    accessorKey: "total",
-    header: "Total",
+    accessorKey: "date",
+    header: "Date",
     cell: ({ row }) => (
-      <span className="font-medium text-foreground">
-        {row.original.currency} {row.original.total.toLocaleString()}
+      <span className="text-xs text-muted-foreground">
+        {formatTableDate(row.original.date)}
       </span>
     ),
   },
@@ -56,49 +47,43 @@ export const orderColumns: ColumnDef<OrderRow>[] = [
     header: "Status",
     cell: ({ row }) => (
       <Badge variant={getOrderStatusVariant(row.original.status)}>
-        {row.original.status.replace("_", " ")}
+        {row.original.status.charAt(0).toUpperCase() + row.original.status.slice(1)}
       </Badge>
     ),
   },
   {
-    accessorKey: "placedAt",
-    header: "Placed",
+    accessorKey: "seller",
+    header: "Seller",
     cell: ({ row }) => (
-      <span className="text-muted-foreground">
-        {formatTableDate(row.original.placedAt)}
-      </span>
+      <span className="text-muted-foreground">{row.original.seller}</span>
     ),
   },
   {
     id: "actions",
-    header: "",
+    header: "Action",
     enableSorting: false,
     enableHiding: false,
-    cell: ({ row }) => (
-      <div className="flex justify-end">
-        <DataTableRowActions
-          actions={[
-            {
-              label: "View order",
-              onClick: () =>
-                toast.info(`Open order ${row.original.id.slice(0, 8)}`),
-            },
-          ]}
-        />
-      </div>
+    cell: () => (
+      <Button variant="outline" size="sm">
+        View
+      </Button>
     ),
   },
 ]
 
 function getOrderStatusVariant(status: string) {
   switch (status) {
+    case "shipped":
+      return "default" as const
     case "completed":
     case "delivered":
       return "default" as const
     case "pending":
-    case "processing":
+    case "confirmed":
       return "outline" as const
     case "cancelled":
+      return "destructive" as const
+    case "refunding":
     case "refunded":
       return "destructive" as const
     default:

@@ -1,93 +1,103 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
-import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
-import { DataTableRowActions } from "@/components/table/data-table-row-actions"
-import { formatTableDate } from "@/lib/table/table-utils"
+import { Button } from "@/components/ui/button"
 import type { ProductRow } from "@/features/marketplace/types"
+
+const categoryColors: Record<string, string> = {
+  feed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400",
+  aeration: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
+  chemical: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+  equipment: "bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-400",
+  testing: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400",
+}
+
+function getCategoryColor(cat: string) {
+  const lower = cat.toLowerCase()
+  for (const [key, cls] of Object.entries(categoryColors)) {
+    if (lower.includes(key)) return cls
+  }
+  return "bg-muted text-muted-foreground"
+}
 
 export const productColumns: ColumnDef<ProductRow>[] = [
   {
-    accessorKey: "name",
-    header: "Product",
+    accessorKey: "id",
+    header: "ID",
     cell: ({ row }) => (
-      <div className="space-y-0.5">
-        <p className="font-medium text-foreground">{row.original.name}</p>
-        <p className="text-xs text-muted-foreground">{row.original.category}</p>
-      </div>
+      <span className="font-mono text-xs text-muted-foreground">
+        {row.original.id.slice(0, 6)}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "name",
+    header: "Name",
+    cell: ({ row }) => (
+      <span className="font-medium">{row.original.name}</span>
     ),
     enableHiding: false,
   },
   {
-    accessorKey: "sellerName",
-    header: "Seller",
-    cell: ({ row }) => (
-      <div className="space-y-0.5">
-        <p className="text-foreground">{row.original.sellerName}</p>
-        <p className="text-xs text-muted-foreground">
-          {row.original.sellerEmail}
-        </p>
-      </div>
-    ),
+    accessorKey: "category",
+    header: "Category",
+    cell: ({ row }) => {
+      const cat = row.original.category
+      if (cat === "-") return <span className="text-muted-foreground">-</span>
+      return (
+        <span className={`inline-block rounded-md px-2.5 py-0.5 text-xs font-medium ${getCategoryColor(cat)}`}>
+          {cat}
+        </span>
+      )
+    },
   },
   {
     accessorKey: "price",
-    header: "Price",
+    header: "Price (₹)",
     cell: ({ row }) => (
-      <span className="text-foreground">
-        {row.original.currency} {row.original.price.toLocaleString()}
-      </span>
+      <span className="tabular-nums">{row.original.price.toLocaleString()}</span>
+    ),
+  },
+  {
+    accessorKey: "orderCount",
+    header: "Orders",
+    cell: ({ row }) => (
+      <span className="tabular-nums font-medium">{row.original.orderCount}</span>
     ),
   },
   {
     accessorKey: "stock",
     header: "Stock",
     cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.original.stock}</span>
+      <span className="tabular-nums">{row.original.stock}</span>
     ),
   },
   {
     accessorKey: "status",
     header: "Status",
-    cell: ({ row }) => (
-      <Badge variant={getProductStatusVariant(row.original.status)}>
-        {row.original.status}
-      </Badge>
-    ),
-  },
-  {
-    accessorKey: "createdAt",
-    header: "Listed",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">
-        {formatTableDate(row.original.createdAt)}
-      </span>
-    ),
+    cell: ({ row }) => {
+      const status = row.original.status
+      const stock = row.original.stock
+      if (status === "active" && stock <= 20) {
+        return <Badge variant="outline" className="text-amber-600 border-amber-300">Low Stock</Badge>
+      }
+      return (
+        <Badge variant={getProductStatusVariant(status)}>
+          {status.charAt(0).toUpperCase() + status.slice(1)}
+        </Badge>
+      )
+    },
   },
   {
     id: "actions",
-    header: "",
+    header: "Action",
     enableSorting: false,
     enableHiding: false,
-    cell: ({ row }) => (
-      <div className="flex justify-end">
-        <DataTableRowActions
-          actions={[
-            {
-              label: "View product",
-              onClick: () =>
-                toast.info(`Open product: ${row.original.name}`),
-            },
-            {
-              label: "Flag product",
-              variant: "destructive",
-              onClick: () =>
-                toast.error(`Flagged ${row.original.name}`),
-            },
-          ]}
-        />
-      </div>
+    cell: () => (
+      <Button variant="outline" size="sm">
+        Edit
+      </Button>
     ),
   },
 ]
