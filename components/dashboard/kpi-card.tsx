@@ -1,3 +1,4 @@
+import Link from "next/link"
 import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -9,6 +10,7 @@ type KpiCardProps = {
   trend?: string
   className?: string
   variant?: "default" | "teal" | "green" | "amber" | "red"
+  href?: string
 }
 
 const variantStyles = {
@@ -62,17 +64,23 @@ export function KpiCard({
   trend,
   className,
   variant = "default",
+  href,
 }: KpiCardProps) {
   const styles = variantStyles[variant]
   const hasGradient = variant !== "default"
 
+  const Wrapper = href ? Link : "div"
+  const wrapperProps = href ? { href } : {}
+
   return (
-    <div
+    <Wrapper
+      {...wrapperProps}
       className={cn(
-        "relative overflow-hidden rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5",
+        "relative block overflow-hidden rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5",
         styles.card,
         styles.shadow,
         hasGradient ? "hover:shadow-[0_8px_28px_rgba(0,0,0,0.22)]" : "shadow-sm hover:shadow-md",
+        href && "cursor-pointer",
         className
       )}
     >
@@ -110,6 +118,6 @@ export function KpiCard({
           </p>
         )}
       </div>
-    </div>
+    </Wrapper>
   )
 }

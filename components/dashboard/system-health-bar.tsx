@@ -17,12 +17,24 @@ export function SystemHealthBar() {
   const errorStatus =
     errorRate > 5 ? "critical" : errorRate > 1 ? "warning" : "healthy"
 
-  const dbStatus = data.database === "healthy" ? "healthy" : "critical"
+  const dbStatus = data.database === "healthy" ? "healthy" : data.database === "degraded" ? "warning" : "critical"
+
+  const uptimeHours = data.server_uptime_hours
+  const uptimeDisplay = uptimeHours >= 24
+    ? `${Math.floor(uptimeHours / 24)}d ${Math.floor(uptimeHours % 24)}h`
+    : `${Math.floor(uptimeHours)}h ${Math.floor((uptimeHours % 1) * 60)}m`
+
+  const apiStatus = data.api_status === "operational" ? "healthy" : data.api_status === "degraded" ? "warning" : "critical"
+  const apiLabel = data.api_status === "operational"
+    ? `${data.api_success_rate_24h}%`
+    : data.api_status === "degraded"
+      ? `Degraded (${data.api_success_rate_24h}%)`
+      : "Down"
 
   const indicators = [
-    { label: "Server", value: "99.97%", status: "healthy" as const },
-    { label: "API", value: "Operational", status: "healthy" as const },
-    { label: "Database", value: dbStatus === "healthy" ? "Healthy" : "Degraded", status: dbStatus },
+    { label: "Server", value: uptimeDisplay, status: "healthy" as const },
+    { label: "API", value: apiLabel, status: apiStatus },
+    { label: "Database", value: dbStatus === "healthy" ? `${data.db_latency_ms}ms` : "Degraded", status: dbStatus },
     { label: "AquaGPT", value: errorStatus === "healthy" ? "Online" : `${errorRate}% errors`, status: errorStatus },
   ]
 

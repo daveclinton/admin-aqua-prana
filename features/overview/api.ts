@@ -32,9 +32,11 @@ export async function getOverviewAlerts(): Promise<{ alerts: OverviewAlert[] }> 
 }
 
 export async function getOverviewActivity(
-  filter?: string
+  filter?: string,
+  offset: number = 0,
+  limit: number = 10
 ): Promise<{ activity: ActivityItem[] }> {
-  const params = new URLSearchParams({ limit: "10" })
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
   if (filter) params.set("filter", filter)
   const res = await api<ApiSuccessResponse<{ activity: ActivityItem[] }>>(
     `/v1/admin/overview/activity?${params}`

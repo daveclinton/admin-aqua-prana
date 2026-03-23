@@ -12,6 +12,15 @@ export interface OverviewStats {
   total_ponds: number
   total_farmers: number
   total_partners: number
+  // Trend comparisons
+  new_ponds_7d: number
+  new_ponds_prev_7d: number
+  new_farmers_7d: number
+  new_farmers_prev_7d: number
+  new_partners_7d: number
+  new_partners_prev_7d: number
+  revenue_7d: number
+  revenue_prev_7d: number
 }
 
 export interface TrendPoint {
@@ -45,9 +54,13 @@ export interface ActivityItem {
 
 export interface SystemHealth {
   database: string
+  db_latency_ms: number
   total_users: number
   active_sessions: number
   aquagpt_error_rate_24h: number
   aquagpt_requests_24h: number
   audit_events_24h: number
+  server_uptime_hours: number
+  api_status: string
+  api_success_rate_24h: number
 }

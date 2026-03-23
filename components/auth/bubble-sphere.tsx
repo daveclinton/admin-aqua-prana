@@ -282,7 +282,7 @@ export function BubbleSphere() {
         p.vx *= 0.96
         p.life -= p.decay
         ctx.beginPath()
-        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2)
+        ctx.arc(p.x, p.y, Math.max(0, p.size * p.life), 0, Math.PI * 2)
         ctx.fillStyle = rgb(P.glow, p.life * (0.5 + p.bright * 0.5))
         ctx.fill()
       })

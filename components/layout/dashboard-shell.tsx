@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { Upload } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { AppSidebar } from "@/components/layout/app-sidebar"
@@ -112,16 +113,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               {breadcrumbs.map((crumb, i) => {
                 const isLast = i === breadcrumbs.length - 1
                 return (
-                  <BreadcrumbItem key={crumb.label}>
+                  <React.Fragment key={crumb.label}>
                     {i > 0 && <BreadcrumbSeparator />}
-                    {isLast ? (
-                      <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-                    ) : (
-                      <BreadcrumbLink href={crumb.href}>
-                        {crumb.label}
-                      </BreadcrumbLink>
-                    )}
-                  </BreadcrumbItem>
+                    <BreadcrumbItem>
+                      {isLast ? (
+                        <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                      ) : (
+                        <BreadcrumbLink href={crumb.href}>
+                          {crumb.label}
+                        </BreadcrumbLink>
+                      )}
+                    </BreadcrumbItem>
+                  </React.Fragment>
                 )
               })}
             </BreadcrumbList>

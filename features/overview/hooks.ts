@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/react-query/query-keys"
 import {
   getOverviewStats,
@@ -34,10 +34,18 @@ export function useOverviewAlerts() {
   })
 }
 
+const PAGE_SIZE = 10
+
 export function useOverviewActivity(filter?: string) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: queryKeys.overview.activity(filter),
-    queryFn: () => getOverviewActivity(filter),
+    queryFn: ({ pageParam = 0 }) =>
+      getOverviewActivity(filter, pageParam, PAGE_SIZE),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.activity.length < PAGE_SIZE) return undefined
+      return allPages.length * PAGE_SIZE
+    },
     staleTime: 30_000,
   })
 }
