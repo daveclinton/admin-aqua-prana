@@ -76,6 +76,7 @@ export function ResetPasswordForm() {
           required
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
+          className="h-auto rounded-[10px] border-[1.5px] border-white/[0.12] bg-white/[0.07] px-3.5 py-3 text-[13.5px] text-white placeholder:text-white/30 focus-visible:border-[rgba(45,200,120,0.6)] focus-visible:bg-white/[0.11] focus-visible:ring-0"
           icon={
             <Lock className="pointer-events-none absolute left-[13px] top-1/2 size-[15px] -translate-y-1/2 text-white/30" />
           }
@@ -96,6 +97,7 @@ export function ResetPasswordForm() {
           required
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
+          className="h-auto rounded-[10px] border-[1.5px] border-white/[0.12] bg-white/[0.07] px-3.5 py-3 text-[13.5px] text-white placeholder:text-white/30 focus-visible:border-[rgba(45,200,120,0.6)] focus-visible:bg-white/[0.11] focus-visible:ring-0"
           icon={
             <Lock className="pointer-events-none absolute left-[13px] top-1/2 size-[15px] -translate-y-1/2 text-white/30" />
           }

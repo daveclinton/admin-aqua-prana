@@ -2,8 +2,11 @@
 
 import { forwardRef, useState } from "react"
 import { Eye, EyeOff } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 
-type PasswordFieldProps = React.ComponentProps<"input"> & {
+type PasswordFieldProps = React.ComponentProps<typeof Input> & {
+  /** Pass a fully-positioned icon (e.g. absolute-positioned) or omit for no icon. */
   icon?: React.ReactNode
 }
 
@@ -14,22 +17,22 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
     return (
       <div className="relative">
         {icon}
-        <input
+        <Input
           ref={ref}
           type={visible ? "text" : "password"}
-          className={`h-auto w-full rounded-[10px] border-[1.5px] border-white/[0.12] bg-white/[0.07] px-3.5 py-3 text-[13.5px] text-white outline-none transition-all placeholder:text-white/30 focus:border-[rgba(45,200,120,0.6)] focus:bg-white/[0.11] ${icon ? "pl-10 pr-10" : "pr-10"} ${className ?? ""}`}
+          className={cn(icon ? "pl-10 pr-10" : "pr-10", className)}
           {...props}
         />
         <button
           type="button"
-          className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-white/35 transition-colors hover:text-white/60"
+          className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground transition-colors hover:text-foreground"
           onClick={() => setVisible((v) => !v)}
           tabIndex={-1}
         >
           {visible ? (
-            <EyeOff className="size-[15px]" />
+            <EyeOff className="size-4" />
           ) : (
-            <Eye className="size-[15px]" />
+            <Eye className="size-4" />
           )}
         </button>
       </div>
