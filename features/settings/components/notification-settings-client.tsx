@@ -1,5 +1,7 @@
 "use client"
 
+import { toast } from "sonner"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import {
   Card,
@@ -8,78 +10,114 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  useNotificationPreferences,
+  useUpdateNotificationPreference,
+} from "@/features/settings/hooks/use-notification-preferences"
+import type { NotificationCategory } from "@/types/auth"
 
-const notificationOptions = [
-  {
-    id: "security_alerts",
-    label: "Security alerts",
-    description: "Get notified about suspicious login activity or password changes.",
-    defaultChecked: true,
-    disabled: true,
+const categoryMeta: Record<
+  NotificationCategory,
+  { label: string; description: string }
+> = {
+  alerts: {
+    label: "Alerts",
+    description:
+      "Security alerts, suspicious login activity, and critical notifications.",
   },
-  {
-    id: "new_user_signups",
-    label: "New user sign-ups",
-    description: "Receive a notification when a new farmer or partner registers.",
-    defaultChecked: false,
+  tasks: {
+    label: "Tasks",
+    description:
+      "Task assignments, reminders, and completion updates.",
   },
-  {
-    id: "verification_requests",
-    label: "Verification requests",
-    description: "Get notified when a user submits documents for verification review.",
-    defaultChecked: true,
+  system: {
+    label: "System",
+    description:
+      "System health, downtime, maintenance, and platform-wide announcements.",
   },
-  {
-    id: "system_alerts",
-    label: "System alerts",
-    description: "Critical system issues, error spikes, and downtime notifications.",
-    defaultChecked: true,
-    disabled: true,
-  },
-  {
-    id: "marketplace_activity",
-    label: "Marketplace activity",
-    description: "New product listings, flagged products, and order issues.",
-    defaultChecked: false,
-  },
-  {
-    id: "forum_moderation",
-    label: "Forum moderation",
-    description: "Flagged or hidden posts that need admin review.",
-    defaultChecked: false,
-  },
-]
+}
 
 export function NotificationSettingsClient() {
+  const { data, isLoading } = useNotificationPreferences()
+  const updateMutation = useUpdateNotificationPreference()
+
+  function handleToggle(category: NotificationCategory, enabled: boolean) {
+    updateMutation.mutate(
+      { category, enabled },
+      {
+        onSuccess: () => toast.success("Notification preference updated"),
+        onError: () => toast.error("Failed to update preference"),
+      }
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-4 w-72" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between py-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-56" />
+                </div>
+                <Skeleton className="h-5 w-9 rounded-full" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const preferences = data?.preferences ?? []
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Email notifications</CardTitle>
           <CardDescription>
-            Choose which notifications you receive by email. Some security
-            notifications cannot be disabled.
+            Choose which notifications you receive by email.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="divide-y">
-            {notificationOptions.map((option) => (
-              <div
-                key={option.id}
-                className="flex items-center justify-between py-4 first:pt-0 last:pb-0"
-              >
-                <div className="space-y-0.5 pr-4">
-                  <p className="text-sm font-medium">{option.label}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {option.description}
-                  </p>
+            {preferences.map((pref) => {
+              const meta = categoryMeta[pref.category]
+              return (
+                <div
+                  key={pref.category}
+                  className="flex items-center justify-between py-4 first:pt-0 last:pb-0"
+                >
+                  <div className="space-y-0.5 pr-4">
+                    <p className="text-sm font-medium">
+                      {meta?.label ?? pref.category}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {meta?.description ?? ""}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={pref.enabled}
+                    disabled={updateMutation.isPending}
+                    onCheckedChange={(checked) =>
+                      handleToggle(pref.category, checked)
+                    }
+                  />
                 </div>
-                <Switch
-                  defaultChecked={option.defaultChecked}
-                  disabled={option.disabled}
-                />
-              </div>
-            ))}
+              )
+            })}
+            {preferences.length === 0 && (
+              <p className="py-4 text-sm text-muted-foreground">
+                No notification preferences available.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

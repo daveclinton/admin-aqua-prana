@@ -1,6 +1,8 @@
 export const queryKeys = {
   auth: {
     me: ["auth", "me"] as const,
+    sessions: ["auth", "sessions"] as const,
+    preferences: ["auth", "preferences"] as const,
   },
   overview: {
     stats: ["overview", "stats"] as const,
@@ -69,6 +71,9 @@ export const queryKeys = {
       ["verifications", params] as const,
     detail: (id: string) => ["verifications", id] as const,
     documents: (id: string) => ["verifications", id, "documents"] as const,
+  },
+  notifications: {
+    preferences: ["notifications", "preferences"] as const,
   },
   auditLogs: {
     all: (params?: Record<string, unknown>) =>

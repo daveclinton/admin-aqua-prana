@@ -99,6 +99,92 @@ export interface ResetPasswordRequest {
   confirm_password: string
 }
 
+// ── Notification Preferences ──────────────────────────────────────
+export type NotificationCategory = "alerts" | "tasks" | "system"
+
+export interface NotificationPreference {
+  category: NotificationCategory
+  enabled: boolean
+}
+
+export interface NotificationPreferencesResponse {
+  preferences: NotificationPreference[]
+}
+
+export interface UpdateNotificationPreferenceRequest {
+  category: NotificationCategory
+  enabled: boolean
+}
+
+// ── Audit Logs ───────────────────────────────────────────────────
+export interface AuditLogEntry {
+  id: string
+  action: string
+  user_id: string | null
+  email: string
+  success: boolean
+  ip_address: string
+  user_agent: string
+  metadata: Record<string, unknown>
+  created_at: string
+  user_name: string | null
+}
+
+export interface AuditLogsResponse {
+  logs: AuditLogEntry[]
+  total: number
+}
+
+export interface GetAuditLogsParams {
+  action?: string
+  user_id?: string
+  success?: string
+  search?: string
+  limit?: number
+  offset?: number
+}
+
+// ── Sessions / Devices ───────────────────────────────────────────
+export interface SessionDevice {
+  id: string
+  ip_address: string | null
+  user_agent: string | null
+  created_at: string
+  last_active_at: string
+  is_current: boolean
+}
+
+export interface SessionsResponse {
+  sessions: SessionDevice[]
+}
+
+export interface RevokeSessionRequest {
+  session_id?: string
+  revoke_all_others?: boolean
+}
+
+// ── User Preferences ─────────────────────────────────────────────
+export interface UserPreferences {
+  dark_mode: boolean
+  compact_view: boolean
+  currency: string
+}
+
+export interface UpdatePreferencesRequest {
+  dark_mode?: boolean
+  compact_view?: boolean
+  currency?: string
+}
+
+// ── Account Deletion ─────────────────────────────────────────────
+export interface DeleteAccountRequest {
+  password: string
+}
+
+export interface DeleteAccountResponse {
+  deleted: true
+}
+
 export interface ApiSuccessResponse<T> {
   success: true
   data: T

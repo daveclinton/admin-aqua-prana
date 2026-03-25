@@ -132,6 +132,7 @@ export function ProfileSettingsClient() {
                 </label>
                 <Input
                   id="first_name"
+                  placeholder={user?.first_name ?? "Enter first name"}
                   value={form.first_name ?? ""}
                   onChange={(e) => handleChange("first_name", e.target.value)}
                 />
@@ -142,6 +143,7 @@ export function ProfileSettingsClient() {
                 </label>
                 <Input
                   id="middle_name"
+                  placeholder={user?.middle_name ?? "Enter middle name"}
                   value={form.middle_name ?? ""}
                   onChange={(e) => handleChange("middle_name", e.target.value)}
                 />
@@ -152,6 +154,7 @@ export function ProfileSettingsClient() {
                 </label>
                 <Input
                   id="last_name"
+                  placeholder={user?.last_name ?? "Enter last name"}
                   value={form.last_name ?? ""}
                   onChange={(e) => handleChange("last_name", e.target.value)}
                 />
@@ -165,6 +168,7 @@ export function ProfileSettingsClient() {
                 <Input
                   id="phone"
                   type="tel"
+                  placeholder={user?.phone ?? "Enter phone number"}
                   value={form.phone ?? ""}
                   onChange={(e) => handleChange("phone", e.target.value)}
                 />
@@ -175,6 +179,7 @@ export function ProfileSettingsClient() {
                 </label>
                 <Input
                   id="organization"
+                  placeholder={user?.organization_name ?? "Enter organization"}
                   value={form.organization_name ?? ""}
                   onChange={(e) => handleChange("organization_name", e.target.value)}
                 />
