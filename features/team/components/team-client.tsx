@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { KpiCard } from "@/components/dashboard/kpi-card"
-import { TeamTableClient } from "@/features/team/components/team-table-client"
 import { cn } from "@/lib/utils"
 
 const teamTabs = ["members", "roles", "audit"] as const
@@ -238,7 +237,7 @@ export function TeamClient() {
           </div>
 
           {/* Members Table */}
-          <Card className="rounded-2xl border border-border/80 py-0">
+          <Card className="rounded-2xl border border-border/80">
             <CardHeader>
               <CardTitle>All Members</CardTitle>
             </CardHeader>
@@ -246,19 +245,19 @@ export function TeamClient() {
               <Table>
                 <TableHeader className="bg-[#f1f5ef]">
                   <TableRow className="hover:bg-[#f1f5ef]">
-                    <TableHead className="px-4">Member</TableHead>
+                    <TableHead className="px-6">Member</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Screen Access</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Last Active</TableHead>
-                    <TableHead className="px-4">Actions</TableHead>
+                    <TableHead className="px-6">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {members.map((m) => (
                     <TableRow key={m.email}>
-                      <TableCell className="px-4">
+                      <TableCell className="px-6">
                         <div className="flex items-center gap-3">
                           <div className={cn("flex size-8 items-center justify-center rounded-full text-xs font-semibold", m.initialsColor)}>
                             {m.initials}
@@ -290,7 +289,7 @@ export function TeamClient() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{m.lastActive}</TableCell>
-                      <TableCell className="px-4">
+                      <TableCell className="px-6">
                         <div className="flex gap-2">
                           {m.actions.map((action) => (
                             <Button
@@ -311,7 +310,7 @@ export function TeamClient() {
                   ))}
                 </TableBody>
               </Table>
-              <div className="flex items-center justify-between border-t px-4 py-3 text-xs text-muted-foreground">
+              <div className="flex items-center justify-between border-t px-6 py-4 text-xs text-muted-foreground">
                 <span>Showing 6 of 8 members</span>
                 <div className="flex gap-1">
                   <Button variant="outline" size="sm" className="h-7 rounded-full px-3" disabled>Previous</Button>
@@ -327,7 +326,7 @@ export function TeamClient() {
           {/* Role Cards */}
           <div className="grid gap-4 md:grid-cols-3">
             {roleCards.map((role) => (
-              <Card key={role.label} className="rounded-2xl border border-border/80 py-0">
+              <Card key={role.label} className="rounded-2xl border border-border/80">
                 <CardContent className="flex items-start gap-3 p-5">
                   <role.icon className={cn("mt-0.5 size-5", role.color)} />
                   <div className="space-y-1">
@@ -341,7 +340,7 @@ export function TeamClient() {
           </div>
 
           {/* Action Permissions Matrix */}
-          <Card className="rounded-2xl border border-border/80 py-0">
+          <Card className="rounded-2xl border border-border/80">
             <CardHeader>
               <CardTitle>Action Permissions</CardTitle>
             </CardHeader>
@@ -349,7 +348,7 @@ export function TeamClient() {
               <Table>
                 <TableHeader className="bg-[#f1f5ef]">
                   <TableRow className="hover:bg-[#f1f5ef]">
-                    <TableHead className="px-4">Permission</TableHead>
+                    <TableHead className="px-6">Permission</TableHead>
                     <TableHead className="text-center">Super Admin</TableHead>
                     <TableHead className="text-center">Agent</TableHead>
                     <TableHead className="text-center">Read-Only</TableHead>
@@ -360,9 +359,9 @@ export function TeamClient() {
                   {actionPermissions.map((row) => (
                     <TableRow key={row.permission}>
                       <TableCell className="px-4 font-medium">{row.permission}</TableCell>
-                      <TableCell className="text-center"><PermCheck value={row.superAdmin} /></TableCell>
-                      <TableCell className="text-center"><PermCheck value={row.agent} /></TableCell>
-                      <TableCell className="text-center"><PermCheck value={row.readOnly} /></TableCell>
+                      <TableCell><div className="flex justify-center"><PermCheck value={row.superAdmin} /></div></TableCell>
+                      <TableCell><div className="flex justify-center"><PermCheck value={row.agent} /></div></TableCell>
+                      <TableCell><div className="flex justify-center"><PermCheck value={row.readOnly} /></div></TableCell>
                       <TableCell className="px-4 text-center text-xs text-muted-foreground">Configurable</TableCell>
                     </TableRow>
                   ))}
@@ -372,7 +371,7 @@ export function TeamClient() {
           </Card>
 
           {/* Screen Visibility Matrix */}
-          <Card className="rounded-2xl border border-border/80 py-0">
+          <Card className="rounded-2xl border border-border/80">
             <CardHeader>
               <CardTitle>Screen Visibility</CardTitle>
             </CardHeader>
@@ -380,7 +379,7 @@ export function TeamClient() {
               <Table>
                 <TableHeader className="bg-[#f1f5ef]">
                   <TableRow className="hover:bg-[#f1f5ef]">
-                    <TableHead className="px-4">Screen</TableHead>
+                    <TableHead className="px-6">Screen</TableHead>
                     <TableHead className="text-center">Super Admin</TableHead>
                     <TableHead className="text-center">Agent</TableHead>
                     <TableHead className="text-center">Read-Only</TableHead>
@@ -391,9 +390,9 @@ export function TeamClient() {
                   {screenVisibility.map((row) => (
                     <TableRow key={row.screen}>
                       <TableCell className="px-4 font-medium">{row.screen}</TableCell>
-                      <TableCell className="text-center"><PermCheck value={row.superAdmin} /></TableCell>
-                      <TableCell className="text-center"><PermCheck value={row.agent} /></TableCell>
-                      <TableCell className="text-center"><PermCheck value={row.readOnly} /></TableCell>
+                      <TableCell><div className="flex justify-center"><PermCheck value={row.superAdmin} /></div></TableCell>
+                      <TableCell><div className="flex justify-center"><PermCheck value={row.agent} /></div></TableCell>
+                      <TableCell><div className="flex justify-center"><PermCheck value={row.readOnly} /></div></TableCell>
                       <TableCell className="px-4 text-center text-xs text-muted-foreground">Configurable</TableCell>
                     </TableRow>
                   ))}
@@ -405,7 +404,7 @@ export function TeamClient() {
 
         {/* AUDIT LOG TAB */}
         <TabsContent value="audit" className="space-y-6 pt-4">
-          <Card className="rounded-2xl border border-border/80 py-0">
+          <Card className="rounded-2xl border border-border/80">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Audit Log</CardTitle>
@@ -419,9 +418,9 @@ export function TeamClient() {
               <Table>
                 <TableHeader className="bg-[#f1f5ef]">
                   <TableRow className="hover:bg-[#f1f5ef]">
-                    <TableHead className="px-4">Timestamp</TableHead>
+                    <TableHead className="px-6">Timestamp</TableHead>
                     <TableHead>Action</TableHead>
-                    <TableHead className="px-4">Actor</TableHead>
+                    <TableHead className="px-6">Actor</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

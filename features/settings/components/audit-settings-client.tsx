@@ -48,9 +48,9 @@ export function AuditSettingsClient() {
           <Table>
             <TableHeader className="bg-[#f1f5ef]">
               <TableRow className="hover:bg-[#f1f5ef]">
-                <TableHead className="px-4">Timestamp</TableHead>
+                <TableHead className="px-6">Timestamp</TableHead>
                 <TableHead>Action</TableHead>
-                <TableHead className="px-4">Actor</TableHead>
+                <TableHead className="px-6">Actor</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -18,7 +18,6 @@ import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -137,7 +136,7 @@ export function AnalyticsClient() {
       {/* Row 1: Growth Cohorts + Revenue Breakdown */}
       <div className="grid gap-4 xl:grid-cols-2">
         {/* Farmer Growth Cohorts */}
-        <Card className="rounded-2xl border border-border/80 py-0">
+        <Card className="rounded-2xl border border-border/80">
           <CardHeader>
             <CardTitle>Farmer Growth Cohorts</CardTitle>
           </CardHeader>
@@ -179,7 +178,7 @@ export function AnalyticsClient() {
         </Card>
 
         {/* Revenue Breakdown */}
-        <Card className="rounded-2xl border border-border/80 py-0">
+        <Card className="rounded-2xl border border-border/80">
           <CardHeader>
             <CardTitle>Revenue Breakdown</CardTitle>
           </CardHeader>
@@ -215,7 +214,7 @@ export function AnalyticsClient() {
       {/* Row 2: Region Performance + Pond Health */}
       <div className="grid gap-4 xl:grid-cols-2">
         {/* Performance by Region */}
-        <Card className="rounded-2xl border border-border/80 py-0">
+        <Card className="rounded-2xl border border-border/80">
           <CardHeader>
             <CardTitle>Performance by Region</CardTitle>
           </CardHeader>
@@ -223,13 +222,13 @@ export function AnalyticsClient() {
             <Table>
               <TableHeader className="bg-[#f1f5ef]">
                 <TableRow className="hover:bg-[#f1f5ef]">
-                  <TableHead className="px-4">Region</TableHead>
+                  <TableHead className="px-6">Region</TableHead>
                   <TableHead>Farmers</TableHead>
                   <TableHead>Ponds</TableHead>
                   <TableHead>Avg Pondscore</TableHead>
                   <TableHead>GMV (₹)</TableHead>
                   <TableHead>Alert Rate</TableHead>
-                  <TableHead className="px-4">Trend</TableHead>
+                  <TableHead className="px-6">Trend</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -252,7 +251,7 @@ export function AnalyticsClient() {
                         {row.alertLabel} {row.alertRate}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-4">
+                    <TableCell className="px-6">
                       <span
                         className={cn(
                           "text-sm font-medium",
@@ -272,7 +271,7 @@ export function AnalyticsClient() {
         </Card>
 
         {/* Pond Health Distribution */}
-        <Card className="rounded-2xl border border-border/80 py-0">
+        <Card className="rounded-2xl border border-border/80">
           <CardHeader>
             <CardTitle>Pond Health Distribution</CardTitle>
           </CardHeader>
@@ -299,7 +298,7 @@ export function AnalyticsClient() {
       {/* Row 3: Species Performance + AquaGPT Usage */}
       <div className="grid gap-4 xl:grid-cols-2">
         {/* Species Performance */}
-        <Card className="rounded-2xl border border-border/80 py-0">
+        <Card className="rounded-2xl border border-border/80">
           <CardHeader>
             <CardTitle>Species Performance Comparison</CardTitle>
           </CardHeader>
@@ -307,12 +306,12 @@ export function AnalyticsClient() {
             <Table>
               <TableHeader className="bg-[#f1f5ef]">
                 <TableRow className="hover:bg-[#f1f5ef]">
-                  <TableHead className="px-4">Species</TableHead>
+                  <TableHead className="px-6">Species</TableHead>
                   <TableHead>Ponds</TableHead>
                   <TableHead>Avg Pondscore</TableHead>
                   <TableHead>Avg Mortality %</TableHead>
                   <TableHead>Avg Feed FCR</TableHead>
-                  <TableHead className="px-4">Alert Freq</TableHead>
+                  <TableHead className="px-6">Alert Freq</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -329,7 +328,7 @@ export function AnalyticsClient() {
                     </TableCell>
                     <TableCell>{row.mortality}</TableCell>
                     <TableCell>{row.fcr}</TableCell>
-                    <TableCell className="px-4">
+                    <TableCell className="px-6">
                       <Badge
                         variant="outline"
                         className={cn("rounded-full px-2.5 py-1", row.alertTag)}
@@ -345,7 +344,7 @@ export function AnalyticsClient() {
         </Card>
 
         {/* AquaGPT Usage Trends */}
-        <Card className="rounded-2xl border border-border/80 py-0">
+        <Card className="rounded-2xl border border-border/80">
           <CardHeader>
             <CardTitle>AquaGPT Usage Trends</CardTitle>
           </CardHeader>
@@ -389,7 +388,7 @@ export function AnalyticsClient() {
       </div>
 
       {/* Report Builder & Data Export */}
-      <Card className="rounded-2xl border border-border/80 py-0">
+      <Card className="rounded-2xl border border-border/80">
         <CardHeader>
           <CardTitle>Report Builder & Data Export</CardTitle>
         </CardHeader>

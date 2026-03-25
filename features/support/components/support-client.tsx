@@ -188,7 +188,7 @@ export function SupportClient() {
       </div>
 
       {/* Ticket Queue */}
-      <Card className="rounded-2xl border border-border/80 py-0">
+      <Card className="rounded-2xl border border-border/80">
         <CardHeader>
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <CardTitle>Ticket Queue</CardTitle>
@@ -219,13 +219,13 @@ export function SupportClient() {
           <Table>
             <TableHeader className="bg-[#f1f5ef]">
               <TableRow className="hover:bg-[#f1f5ef]">
-                <TableHead className="px-4">Ticket ID</TableHead>
+                <TableHead className="px-6">Ticket ID</TableHead>
                 <TableHead>Subject</TableHead>
                 <TableHead>Priority</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Agent</TableHead>
                 <TableHead>SLA</TableHead>
-                <TableHead className="px-4">Action</TableHead>
+                <TableHead className="px-6">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -257,7 +257,7 @@ export function SupportClient() {
                       {ticket.sla}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4">
+                  <TableCell className="px-6">
                     <Button variant="outline" size="sm" className="rounded-full">
                       <Eye className="size-3" />
                       View
@@ -267,7 +267,7 @@ export function SupportClient() {
               ))}
             </TableBody>
           </Table>
-          <div className="flex items-center justify-between border-t px-4 py-3 text-xs text-muted-foreground">
+          <div className="flex items-center justify-between border-t px-6 py-4 text-xs text-muted-foreground">
             <span>Showing 5 of 25 tickets</span>
             <div className="flex gap-1">
               <Button variant="outline" size="sm" className="h-7 rounded-full px-3" disabled>
@@ -283,7 +283,7 @@ export function SupportClient() {
 
       {/* Resolution Tracking + Agent Workload */}
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card className="rounded-2xl border border-border/80 py-0">
+        <Card className="rounded-2xl border border-border/80">
           <CardHeader>
             <CardTitle>Resolution Tracking</CardTitle>
           </CardHeader>
@@ -310,7 +310,7 @@ export function SupportClient() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border border-border/80 py-0">
+        <Card className="rounded-2xl border border-border/80">
           <CardHeader>
             <CardTitle>Agent Workload</CardTitle>
           </CardHeader>
@@ -335,7 +335,7 @@ export function SupportClient() {
       </div>
 
       {/* Data Sending Requests */}
-      <Card className="rounded-2xl border border-border/80 py-0">
+      <Card className="rounded-2xl border border-border/80">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Data Sending Requests</CardTitle>
@@ -345,12 +345,12 @@ export function SupportClient() {
           <Table>
             <TableHeader className="bg-[#f1f5ef]">
               <TableRow className="hover:bg-[#f1f5ef]">
-                <TableHead className="px-4">Request ID</TableHead>
+                <TableHead className="px-6">Request ID</TableHead>
                 <TableHead>Farmer</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="px-4">Action</TableHead>
+                <TableHead className="px-6">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -377,7 +377,7 @@ export function SupportClient() {
                       {req.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="px-4">
+                  <TableCell className="px-6">
                     <Button variant="outline" size="sm" className="rounded-full">
                       {req.action}
                     </Button>
@@ -386,7 +386,7 @@ export function SupportClient() {
               ))}
             </TableBody>
           </Table>
-          <div className="flex items-center justify-between border-t px-4 py-3 text-xs text-muted-foreground">
+          <div className="flex items-center justify-between border-t px-6 py-4 text-xs text-muted-foreground">
             <span>Showing 2 of 2 requests</span>
             <div className="flex gap-1">
               <Button variant="outline" size="sm" className="h-7 rounded-full px-3" disabled>

@@ -6,7 +6,6 @@ import {
   ChevronDown,
   CreditCard,
   Download,
-  Eye,
   FileText,
   RefreshCw,
   Search,
@@ -19,7 +18,6 @@ import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -146,7 +144,7 @@ export function BillingClient() {
             <KpiCard title="Free Tier" value="52" icon={CreditCard} variant="teal" />
           </div>
 
-          <Card className="rounded-2xl border border-border/80 py-0">
+          <Card className="rounded-2xl border border-border/80">
             <CardHeader>
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <CardTitle>Subscriptions</CardTitle>
@@ -168,14 +166,14 @@ export function BillingClient() {
               <Table>
                 <TableHeader className="bg-[#f1f5ef]">
                   <TableRow className="hover:bg-[#f1f5ef]">
-                    <TableHead className="px-4">Farmer</TableHead>
+                    <TableHead className="px-6">Farmer</TableHead>
                     <TableHead>Plan</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Billing Cycle</TableHead>
                     <TableHead>Next Renewal</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>History</TableHead>
-                    <TableHead className="px-4">Action</TableHead>
+                    <TableHead className="px-6">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -204,7 +202,7 @@ export function BillingClient() {
                           History
                         </Button>
                       </TableCell>
-                      <TableCell className="px-4">
+                      <TableCell className="px-6">
                         <div className="flex gap-2">
                           {sub.actions.map((action) => (
                             <Button
@@ -227,7 +225,7 @@ export function BillingClient() {
                   ))}
                 </TableBody>
               </Table>
-              <div className="flex items-center justify-between border-t px-4 py-3 text-xs text-muted-foreground">
+              <div className="flex items-center justify-between border-t px-6 py-4 text-xs text-muted-foreground">
                 <span>Showing 5 of 200</span>
                 <div className="flex gap-1">
                   <Button variant="outline" size="sm" className="h-7 rounded-full px-3" disabled>Previous</Button>
@@ -285,7 +283,7 @@ export function BillingClient() {
             <KpiCard title="Total Invoices" value="218" icon={FileText} variant="default" />
           </div>
 
-          <Card className="rounded-2xl border border-border/80 py-0">
+          <Card className="rounded-2xl border border-border/80">
             <CardHeader>
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <CardTitle>All Invoices</CardTitle>
@@ -307,7 +305,7 @@ export function BillingClient() {
               <Table>
                 <TableHeader className="bg-[#f1f5ef]">
                   <TableRow className="hover:bg-[#f1f5ef]">
-                    <TableHead className="px-4">Invoice #</TableHead>
+                    <TableHead className="px-6">Invoice #</TableHead>
                     <TableHead>Farmer</TableHead>
                     <TableHead>Plan</TableHead>
                     <TableHead>Period</TableHead>
@@ -315,7 +313,7 @@ export function BillingClient() {
                     <TableHead>Issued</TableHead>
                     <TableHead>Due</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="px-4">Actions</TableHead>
+                    <TableHead className="px-6">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -337,7 +335,7 @@ export function BillingClient() {
                           {inv.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="px-4">
+                      <TableCell className="px-6">
                         <div className="flex gap-2">
                           {inv.actions.map((action) => (
                             <Button
@@ -358,7 +356,7 @@ export function BillingClient() {
                   ))}
                 </TableBody>
               </Table>
-              <div className="flex items-center justify-between border-t px-4 py-3 text-xs text-muted-foreground">
+              <div className="flex items-center justify-between border-t px-6 py-4 text-xs text-muted-foreground">
                 <span>Showing 6 of 218 invoices</span>
                 <div className="flex gap-1">
                   <Button variant="outline" size="sm" className="h-7 rounded-full px-3" disabled>Previous</Button>
@@ -370,7 +368,7 @@ export function BillingClient() {
 
           {/* Monthly Summary + Bulk Actions */}
           <div className="grid gap-4 xl:grid-cols-2">
-            <Card className="rounded-2xl border border-border/80 py-0">
+            <Card className="rounded-2xl border border-border/80">
               <CardHeader>
                 <CardTitle>Monthly Summary</CardTitle>
               </CardHeader>
@@ -390,7 +388,7 @@ export function BillingClient() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border border-border/80 py-0">
+            <Card className="rounded-2xl border border-border/80">
               <CardHeader>
                 <CardTitle>Bulk Actions</CardTitle>
               </CardHeader>
@@ -404,7 +402,7 @@ export function BillingClient() {
                   <Button
                     key={item.label}
                     variant="outline"
-                    className="w-full justify-start gap-2 rounded-xl px-4 py-3 text-sm"
+                    className="w-full justify-start gap-2 rounded-xl px-5 py-3 text-sm"
                   >
                     <item.icon className="size-4 text-muted-foreground" />
                     {item.label}
@@ -436,7 +434,7 @@ export function BillingClient() {
 
           <div className="grid gap-4 md:grid-cols-3">
             {planConfigs.map((plan) => (
-              <Card key={plan.name} className="rounded-2xl border border-border/80 py-0">
+              <Card key={plan.name} className="rounded-2xl border border-border/80">
                 <CardHeader>
                   <CardTitle className="text-base">{plan.name} Plan</CardTitle>
                 </CardHeader>
