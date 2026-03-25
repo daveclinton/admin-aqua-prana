@@ -7,7 +7,11 @@ import { cn } from "@/lib/utils"
 const settingsTabs = [
   { href: "/settings/profile", label: "Profile" },
   { href: "/settings/security", label: "Security" },
+  { href: "/settings/devices", label: "Devices" },
   { href: "/settings/notifications", label: "Notifications" },
+  { href: "/settings/preferences", label: "Preferences" },
+  { href: "/settings/audit", label: "Audit Log" },
+  { href: "/settings/data-privacy", label: "Data & Privacy" },
 ]
 
 export default function SettingsLayout({

@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { CommunityForumClient } from "@/features/community-forum/components/community-forum-client"
 import { PAGE_METADATA } from "@/lib/constants/app"
 
 const page = PAGE_METADATA["/community-forum"]
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 }
 
 export default function CommunityForumPage() {
-  return <div>Community Forum</div>
+  return <CommunityForumClient />
 }

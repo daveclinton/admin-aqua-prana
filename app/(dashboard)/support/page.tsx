@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { SupportClient } from "@/features/support/components/support-client"
 import { PAGE_METADATA } from "@/lib/constants/app"
 
 const page = PAGE_METADATA["/support"]
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 }
 
 export default function SupportPage() {
-  return <div>Support</div>
+  return <SupportClient />
 }
