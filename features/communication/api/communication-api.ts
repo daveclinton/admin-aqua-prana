@@ -1,6 +1,6 @@
 import { api } from "@/lib/api/client"
 import type { ApiSuccessResponse } from "@/types/auth"
-import type { CommStatsDTO, BroadcastDTO, SmsCampaignDTO, SuppressionDTO } from "@/features/communication/types"
+import type { CommStatsDTO, BroadcastDTO, SmsCampaignDTO, SuppressionDTO, CommAnalyticsDTO } from "@/features/communication/types"
 
 export async function getCommStats(): Promise<CommStatsDTO> {
   const res = await api<ApiSuccessResponse<CommStatsDTO>>("/v1/admin/communication/stats")
@@ -77,6 +77,13 @@ export async function getSuppressionList(params?: {
 export async function removeSuppression(id: string) {
   const res = await api<ApiSuccessResponse<{ removed: boolean }>>(
     "/v1/admin/communication/suppressions", { method: "DELETE", body: { id } }
+  )
+  return res.data
+}
+
+export async function getCommAnalytics(range = "30D"): Promise<CommAnalyticsDTO> {
+  const res = await api<ApiSuccessResponse<CommAnalyticsDTO>>(
+    `/v1/admin/communication/analytics?range=${range}`
   )
   return res.data
 }

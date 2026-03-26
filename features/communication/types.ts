@@ -45,3 +45,16 @@ export type SuppressionDTO = {
   farmer_name: string | null
   farmer_email: string
 }
+
+export type CommAnalyticsDTO = {
+  audience_segments: { audience: string; rate: number; total_sent: number }[]
+  send_windows: { label: string; value: string; subtitle: string }[]
+  message_types: { type: string; sends: number; push_open_rate: string; total_recipients: number }[]
+  open_rate_trend: { date: string; total: number; opened: number; rate: number }[]
+  summary: {
+    avg_open_rate: number
+    opt_out_rate: number
+    avg_messages_per_user: number
+    top_performing: string
+  }
+}

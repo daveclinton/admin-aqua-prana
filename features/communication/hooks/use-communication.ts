@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   getCommStats, sendBroadcast, getBroadcastHistory,
   getSmsCampaigns, createSmsCampaign, updateSmsCampaign,
-  getSuppressionList, removeSuppression,
+  getSuppressionList, removeSuppression, getCommAnalytics,
 } from "@/features/communication/api/communication-api"
 
 export function useCommStats() {
@@ -47,6 +47,13 @@ export function useUpdateSmsCampaign() {
     mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updateSmsCampaign>[1] }) =>
       updateSmsCampaign(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["comm", "sms"] }),
+  })
+}
+
+export function useCommAnalytics(range = "30D") {
+  return useQuery({
+    queryKey: ["comm", "analytics", range],
+    queryFn: () => getCommAnalytics(range),
   })
 }
 

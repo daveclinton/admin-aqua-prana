@@ -33,6 +33,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { cn } from "@/lib/utils"
 import { useDataTable } from "@/hooks/table/use-data-table"
 import type { DataTableState } from "@/lib/table/table-types"
 import {
@@ -42,6 +43,7 @@ import {
 import { getSortingValue, resolveUpdater } from "@/lib/table/table-utils"
 import {
   useCommStats,
+  useCommAnalytics,
   useBroadcastHistory,
   useSmsCampaigns,
   useSuppressionList,
@@ -94,55 +96,7 @@ type SuppressionRow = {
   action: string
 }
 
-type AnalyticsAudienceRow = {
-  id: string
-  audience: string
-  rate: number
-  tone: "green" | "amber" | "blue" | "red"
-}
-
-type SendWindowRow = {
-  id: string
-  label: string
-  value: string
-  subtitle: string
-}
-
-type MessageTypePerformanceRow = {
-  id: string
-  type: string
-  sends: number
-  pushOpen: string
-  emailOpen: string
-  optOuts: number
-  tone: "red" | "blue" | "amber" | "green"
-}
-
-/* ------------------------------------------------------------------ */
-/*  Static analytics data (no backend endpoint yet)                    */
-/* ------------------------------------------------------------------ */
-
-const audiencePerformance: AnalyticsAudienceRow[] = [
-  { id: "a1", audience: "Pro Plan Farmers", rate: 84.2, tone: "green" },
-  { id: "a2", audience: "Enterprise Farmers", rate: 91, tone: "green" },
-  { id: "a3", audience: "Free Tier Farmers", rate: 61.3, tone: "amber" },
-  { id: "a4", audience: "New Farmers (<30 days)", rate: 76.8, tone: "blue" },
-  { id: "a5", audience: "Inactive (>7 days)", rate: 41.2, tone: "red" },
-]
-
-const sendWindows: SendWindowRow[] = [
-  { id: "w1", label: "Weekday", value: "9AM", subtitle: "84% open" },
-  { id: "w2", label: "Weekday", value: "6PM", subtitle: "81% open" },
-  { id: "w3", label: "Weekend", value: "10AM", subtitle: "72% open" },
-  { id: "w4", label: "Best Day", value: "Tue", subtitle: "89% open" },
-]
-
-const messageTypePerformance: MessageTypePerformanceRow[] = [
-  { id: "mt1", type: "Safety Alerts", sends: 18, pushOpen: "91%", emailOpen: "88%", optOuts: 0, tone: "red" },
-  { id: "mt2", type: "Product Updates", sends: 4, pushOpen: "84%", emailOpen: "78%", optOuts: 0, tone: "blue" },
-  { id: "mt3", type: "Billing Reminders", sends: 12, pushOpen: "74%", emailOpen: "71%", optOuts: 2, tone: "blue" },
-  { id: "mt4", type: "Promotions", sends: 6, pushOpen: "62%", emailOpen: "58%", optOuts: 3, tone: "amber" },
-]
+/* Analytics data fetched from API via useCommAnalytics() */
 
 /* ------------------------------------------------------------------ */
 /*  Search-param presets                                               */
@@ -270,8 +224,10 @@ export function CommunicationClient() {
   const [selectedSmsAudience, setSelectedSmsAudience] = useState("All Farmers")
   const [smsScheduledFor, setSmsScheduledFor] = useState("")
 
-  /* ---- search state: sent log ---- */
-  const [sentLogSearch, setSentLogSearch] = useState("")
+  /* ---- URL-managed filter state ---- */
+  const [sentLogSearch, setSentLogSearch] = useQueryState("logSearch", { defaultValue: "", history: "replace" })
+  const [sentLogChannel, setSentLogChannel] = useQueryState("logChannel", { defaultValue: "", history: "replace" })
+  const [analyticsRange, setAnalyticsRange] = useQueryState("analyticsRange", { defaultValue: "30D", history: "replace" })
 
   /* ---- static option lists ---- */
   const audienceOptions = ["All Users", "Free Tier", "Pro Plan", "Enterprise", "Mumbai", "Chennai", "Kolkata", "Has Critical Alerts"]
@@ -282,10 +238,11 @@ export function CommunicationClient() {
   /* ---- API hooks ---- */
   const stats = useCommStats()
   const overviewStats = useOverviewStats()
-  const broadcastHistory = useBroadcastHistory({ search: sentLogSearch || undefined, limit: 20 })
+  const broadcastHistory = useBroadcastHistory({ search: (sentLogSearch ?? "") || undefined, limit: 20 })
   const smsCampaignsQuery = useSmsCampaigns({ limit: 20 })
   const suppressions = useSuppressionList({ channel: "push" })
 
+  const commAnalytics = useCommAnalytics(analyticsRange ?? "30D")
   const sendBroadcast = useSendBroadcast()
   const createSmsCampaign = useCreateSmsCampaign()
   const removeSuppression = useRemoveSuppression()
@@ -860,9 +817,9 @@ export function CommunicationClient() {
             ) : (
               <>
                 <KpiCard title="Push Open Rate" value={avgOpenRate} subtitle="↑ +3% vs last mo" icon={Bell} variant="green" />
-                <KpiCard title="Email Open Rate" value="72%" subtitle="Steady across campaigns" icon={Mail} variant="teal" />
-                <KpiCard title="SMS Delivery" value="99.1%" subtitle="Strong system-wide delivery" icon={Smartphone} variant="amber" />
-                <KpiCard title="Opt-Out Rate" value="0.6%" subtitle="Well within healthy range" icon={MessageSquare} variant="default" />
+                <KpiCard title="Email Open Rate" value="—" subtitle="Coming soon" icon={Mail} variant="teal" />
+                <KpiCard title="SMS Delivery" value="—" subtitle="Coming soon" icon={Smartphone} variant="amber" />
+                <KpiCard title="Opt-Out Rate" value={stats.data ? `${((stats.data.total_suppressions / Math.max(overviewStats.data?.total_farmers ?? 1, 1)) * 100).toFixed(1)}%` : "—"} subtitle="Across all channels" icon={MessageSquare} variant="default" />
                 <KpiCard title="Messages Sent / Mo" value={sentThisMonth} subtitle="All campaign channels" icon={Send} variant="green" />
               </>
             )}
@@ -875,15 +832,26 @@ export function CommunicationClient() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-end gap-2">
-                  <button className="rounded-full bg-[#224d3a] px-4 py-1.5 text-xs font-medium text-white">30D</button>
-                  <button className="rounded-full border px-4 py-1.5 text-xs font-medium text-muted-foreground">90D</button>
-                  <button className="rounded-full border px-4 py-1.5 text-xs font-medium text-muted-foreground">12M</button>
+                  {["30D", "90D", "12M"].map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => void setAnalyticsRange(r)}
+                      className={cn(
+                        "rounded-full px-4 py-1.5 text-xs font-medium",
+                        (analyticsRange ?? "30D") === r
+                          ? "bg-[#224d3a] text-white"
+                          : "border text-muted-foreground hover:bg-muted"
+                      )}
+                    >
+                      {r}
+                    </button>
+                  ))}
                 </div>
                 <div className="rounded-2xl bg-[#f3f8f4] p-4">
                   <div className="mb-3 flex flex-wrap items-center justify-end gap-3 text-[11px] text-muted-foreground">
                     <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-emerald-600" /> Push {avgOpenRate}</span>
-                    <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-teal-500" /> Email 72%</span>
-                    <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-amber-500" /> SMS 99%</span>
+                    <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-teal-500" /> Email —</span>
+                    <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-amber-500" /> SMS —</span>
                   </div>
                   <div className="relative h-44 overflow-hidden rounded-xl bg-[linear-gradient(to_right,transparent_0%,transparent_24.5%,rgba(23,57,42,0.06)_25%,transparent_25.5%,transparent_49.5%,rgba(23,57,42,0.06)_50%,transparent_50.5%,transparent_74.5%,rgba(23,57,42,0.06)_75%,transparent_75.5%),linear-gradient(to_bottom,rgba(23,57,42,0.04)_1px,transparent_1px)] bg-[length:100%_100%,100%_36px]">
                     <div className="absolute left-[26%] right-[10%] top-4 border-t-2 border-dashed border-amber-400" />
@@ -930,17 +898,27 @@ export function CommunicationClient() {
                     <span>Opt-Outs</span>
                   </div>
                   <div className="divide-y">
-                    {messageTypePerformance.map((item) => (
-                      <div key={item.id} className="grid grid-cols-[1.2fr_0.6fr_0.7fr_0.7fr_0.7fr] gap-3 px-4 py-4 text-sm">
-                        <div>
-                          <AnalyticsToneBadge tone={item.tone}>{item.type}</AnalyticsToneBadge>
-                        </div>
-                        <span>{item.sends}</span>
-                        <span className={item.pushOpen === "91%" || item.pushOpen === "84%" ? "font-medium text-emerald-600" : item.pushOpen === "62%" ? "font-medium text-amber-600" : "font-medium text-blue-600"}>{item.pushOpen}</span>
-                        <span>{item.emailOpen}</span>
-                        <span>{item.optOuts}</span>
-                      </div>
-                    ))}
+                    {commAnalytics.isLoading ? (
+                      <TableSkeleton rows={3} />
+                    ) : (commAnalytics.data?.message_types ?? []).length === 0 ? (
+                      <p className="px-4 py-6 text-center text-sm text-muted-foreground">No data yet</p>
+                    ) : (
+                      (commAnalytics.data?.message_types ?? []).map((item, i) => {
+                        const rateNum = parseInt(item.push_open_rate)
+                        const tone: "red" | "blue" | "amber" | "green" = rateNum >= 80 ? "red" : rateNum >= 70 ? "blue" : rateNum >= 60 ? "amber" : "green"
+                        return (
+                          <div key={i} className="grid grid-cols-[1.2fr_0.6fr_0.7fr_0.7fr_0.7fr] gap-3 px-4 py-4 text-sm">
+                            <div>
+                              <AnalyticsToneBadge tone={tone}>{item.type}</AnalyticsToneBadge>
+                            </div>
+                            <span>{item.sends}</span>
+                            <span className={rateNum >= 80 ? "font-medium text-emerald-600" : rateNum >= 60 ? "font-medium text-amber-600" : "font-medium text-blue-600"}>{item.push_open_rate}</span>
+                            <span>—</span>
+                            <span>—</span>
+                          </div>
+                        )
+                      })
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -953,20 +931,29 @@ export function CommunicationClient() {
                 <CardTitle>Audience Engagement Segments</CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
-                {audiencePerformance.map((segment) => (
-                  <div key={segment.id} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-sm">
-                      <p className="font-medium">{segment.audience}</p>
-                      <p className={analyticsToneText(segment.tone)}>{segment.rate.toFixed(1)}%</p>
-                    </div>
-                    <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className={analyticsToneBar(segment.tone)}
-                        style={{ width: `${segment.rate}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                {commAnalytics.isLoading ? (
+                  <TableSkeleton rows={4} />
+                ) : (commAnalytics.data?.audience_segments ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No audience data yet</p>
+                ) : (
+                  (commAnalytics.data?.audience_segments ?? []).map((segment, i) => {
+                    const tone: "green" | "amber" | "blue" | "red" = segment.rate >= 75 ? "green" : segment.rate >= 60 ? "blue" : segment.rate >= 40 ? "amber" : "red"
+                    return (
+                      <div key={i} className="space-y-1.5">
+                        <div className="flex items-center justify-between text-sm">
+                          <p className="font-medium">{segment.audience}</p>
+                          <p className={analyticsToneText(tone)}>{segment.rate.toFixed(1)}%</p>
+                        </div>
+                        <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className={analyticsToneBar(tone)}
+                            style={{ width: `${segment.rate}%` }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
               </CardContent>
             </Card>
 
@@ -980,20 +967,39 @@ export function CommunicationClient() {
                     Best times to send (by open rate)
                   </p>
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    {sendWindows.map((item) => (
-                      <div key={item.id} className="rounded-xl border bg-white px-4 py-3 text-center shadow-xs shadow-black/5">
-                        <p className="text-xs text-muted-foreground">{item.label}</p>
-                        <p className={item.value === "10AM" ? "mt-1 text-2xl font-semibold text-amber-600" : item.value === "Tue" ? "mt-1 text-2xl font-semibold text-blue-600" : "mt-1 text-2xl font-semibold text-emerald-600"}>{item.value}</p>
-                        <p className="text-xs text-muted-foreground">{item.subtitle}</p>
-                      </div>
-                    ))}
+                    {commAnalytics.isLoading ? (
+                      Array.from({ length: 4 }).map((_, i) => (
+                        <Skeleton key={i} className="h-20 rounded-xl" />
+                      ))
+                    ) : (commAnalytics.data?.send_windows ?? []).length === 0 ? (
+                      <p className="col-span-4 text-center text-sm text-muted-foreground">No send time data yet</p>
+                    ) : (
+                      (commAnalytics.data?.send_windows ?? []).map((item, i) => (
+                        <div key={i} className="rounded-xl border bg-white px-4 py-3 text-center shadow-xs shadow-black/5">
+                          <p className="text-xs text-muted-foreground">{item.label}</p>
+                          <p className="mt-1 text-2xl font-semibold text-emerald-600">{item.value}</p>
+                          <p className="text-xs text-muted-foreground">{item.subtitle}</p>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 
                 <div className="space-y-0">
-                  <AnalyticsSummaryRow label="Opt-out rate (30d)" value="0.6%" valueClassName="text-emerald-600" />
-                  <AnalyticsSummaryRow label="Avg messages / user / mo" value="3.2" />
-                  <AnalyticsSummaryRow label="Highest performing message" value="Safety Alerts (91%)" valueClassName="text-emerald-600" />
+                  <AnalyticsSummaryRow
+                    label="Opt-out rate (30d)"
+                    value={commAnalytics.data ? `${commAnalytics.data.summary.opt_out_rate}%` : "—"}
+                    valueClassName="text-emerald-600"
+                  />
+                  <AnalyticsSummaryRow
+                    label="Avg messages / user / mo"
+                    value={commAnalytics.data ? String(commAnalytics.data.summary.avg_messages_per_user) : "—"}
+                  />
+                  <AnalyticsSummaryRow
+                    label="Highest performing message"
+                    value={commAnalytics.data?.summary.top_performing ?? "—"}
+                    valueClassName="text-emerald-600"
+                  />
                 </div>
 
                 <Button variant="outline" onClick={() => toast.info("Export coming soon")}>Download Analytics Report</Button>
@@ -1029,12 +1035,28 @@ export function CommunicationClient() {
                     className="h-9 pl-9"
                     placeholder="Search by title or recipient..."
                     value={sentLogSearch}
-                    onChange={(e) => setSentLogSearch(e.target.value)}
+                    onChange={(e) => void setSentLogSearch(e.target.value)}
                   />
                 </div>
-                <SimpleFilterChip label="All Channels" />
-                <SimpleFilterChip label="All Audiences" />
-                <SimpleFilterChip label="All Time" />
+                {["All Channels", "Push", "SMS", "Email"].map((ch) => {
+                  const val = ch === "All Channels" ? "" : ch.toLowerCase()
+                  const isActive = (sentLogChannel ?? "") === val
+                  return (
+                    <button
+                      key={ch}
+                      type="button"
+                      onClick={() => void setSentLogChannel(val)}
+                      className={cn(
+                        "rounded-lg border px-3 py-2 text-sm transition-colors",
+                        isActive
+                          ? "bg-[#1b4332] text-white border-[#1b4332]"
+                          : "bg-background text-muted-foreground hover:bg-muted"
+                      )}
+                    >
+                      {ch}
+                    </button>
+                  )
+                })}
               </div>
             </CardHeader>
             <CardContent>
@@ -1273,16 +1295,6 @@ function SummaryMetric({
   )
 }
 
-function SimpleFilterChip({ label }: { label: string }) {
-  return (
-    <button
-      type="button"
-      className="rounded-lg border bg-background px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted"
-    >
-      {label}
-    </button>
-  )
-}
 
 /* ================================================================== */
 /*  Column definitions                                                 */
@@ -1380,7 +1392,7 @@ function AnalyticsToneBadge({
   tone,
   children,
 }: {
-  tone: MessageTypePerformanceRow["tone"]
+  tone: "red" | "blue" | "amber" | "green"
   children: string
 }) {
   const className =
@@ -1412,14 +1424,14 @@ function AnalyticsSummaryRow({
   )
 }
 
-function analyticsToneText(tone: AnalyticsAudienceRow["tone"]) {
+function analyticsToneText(tone: "green" | "amber" | "blue" | "red") {
   if (tone === "green") return "font-medium text-emerald-600"
   if (tone === "amber") return "font-medium text-amber-600"
   if (tone === "blue") return "font-medium text-blue-600"
   return "font-medium text-red-500"
 }
 
-function analyticsToneBar(tone: AnalyticsAudienceRow["tone"]) {
+function analyticsToneBar(tone: "green" | "amber" | "blue" | "red") {
   if (tone === "green") return "h-full rounded-full bg-emerald-500"
   if (tone === "amber") return "h-full rounded-full bg-amber-500"
   if (tone === "blue") return "h-full rounded-full bg-blue-600"
