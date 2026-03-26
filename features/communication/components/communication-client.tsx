@@ -47,9 +47,9 @@ import {
   useSuppressionList,
   useSendBroadcast,
   useCreateSmsCampaign,
-  useUpdateSmsCampaign,
   useRemoveSuppression,
 } from "@/features/communication/hooks/use-communication"
+import { useOverviewStats } from "@/features/analytics/hooks/use-analytics"
 import type {
   BroadcastDTO,
   SmsCampaignDTO,
@@ -145,7 +145,7 @@ const messageTypePerformance: MessageTypePerformanceRow[] = [
 ]
 
 /* ------------------------------------------------------------------ */
-/*  Search‑param presets                                               */
+/*  Search-param presets                                               */
 /* ------------------------------------------------------------------ */
 
 const tabOptions = ["push", "sms", "analytics", "sent-log"] as const
@@ -170,7 +170,7 @@ const suppressionSearchParams = createTableSearchParams({
 })
 
 /* ------------------------------------------------------------------ */
-/*  Helpers: map DTOs → table rows                                     */
+/*  Helpers: map DTOs -> table rows                                     */
 /* ------------------------------------------------------------------ */
 
 function mapBroadcastToRow(b: BroadcastDTO): BroadcastRow {
@@ -268,6 +268,7 @@ export function CommunicationClient() {
   const [smsCampaignName, setSmsCampaignName] = useState("")
   const [smsMessage, setSmsMessage] = useState("")
   const [selectedSmsAudience, setSelectedSmsAudience] = useState("All Farmers")
+  const [smsScheduledFor, setSmsScheduledFor] = useState("")
 
   /* ---- search state: sent log ---- */
   const [sentLogSearch, setSentLogSearch] = useState("")
@@ -275,16 +276,18 @@ export function CommunicationClient() {
   /* ---- static option lists ---- */
   const audienceOptions = ["All Users", "Free Tier", "Pro Plan", "Enterprise", "Mumbai", "Chennai", "Kolkata", "Has Critical Alerts"]
   const smsAudienceOptions = ["All Farmers", "Shrimp Farmers", "Pro Plan", "Overdue Billing", "Critical Alerts", "New this month"]
+  const pushCategoryOptions = ["alerts", "tasks", "system"]
+  const pushSeverityOptions = ["info", "warning", "critical"]
 
   /* ---- API hooks ---- */
   const stats = useCommStats()
+  const overviewStats = useOverviewStats()
   const broadcastHistory = useBroadcastHistory({ search: sentLogSearch || undefined, limit: 20 })
   const smsCampaignsQuery = useSmsCampaigns({ limit: 20 })
   const suppressions = useSuppressionList({ channel: "push" })
 
   const sendBroadcast = useSendBroadcast()
   const createSmsCampaign = useCreateSmsCampaign()
-  const updateSmsCampaign = useUpdateSmsCampaign()
   const removeSuppression = useRemoveSuppression()
 
   /* ---- derived data ---- */
@@ -304,6 +307,26 @@ export function CommunicationClient() {
   )
 
   const recentPushSends = broadcastRows.slice(0, 3)
+
+  /* ---- estimated reach from overview stats ---- */
+  const estimatedReach = overviewStats.data?.total_farmers ?? "—"
+
+  /* ---- avg recipients from broadcast history ---- */
+  const avgRecipients = useMemo(() => {
+    const broadcasts = broadcastHistory.data?.broadcasts ?? []
+    if (broadcasts.length === 0) return "—"
+    const total = broadcasts.reduce((sum, b) => sum + b.recipient_count, 0)
+    return String(Math.round(total / broadcasts.length))
+  }, [broadcastHistory.data])
+
+  /* ---- channel performance from stats ---- */
+  const channelPerformancePush = useMemo(() => {
+    if (!stats.data) return "—"
+    return `${stats.data.sent_this_month} sent · ${stats.data.avg_open_rate.toFixed(0)}% open rate`
+  }, [stats.data])
+
+  const totalDelivered = stats.data ? String(stats.data.total_recipients_this_month) : "—"
+  const totalFailed = "—"
 
   /* ---- handlers ---- */
   function handleSendNotification() {
@@ -330,7 +353,15 @@ export function CommunicationClient() {
     )
   }
 
-  function handleLaunchSmsCampaign() {
+  function handlePushSaveDraft() {
+    toast.info("Draft saved")
+  }
+
+  function handlePushSchedule() {
+    toast.info("Scheduling coming soon")
+  }
+
+  function handleSmsSendNow() {
     createSmsCampaign.mutate(
       {
         title: smsCampaignName,
@@ -339,15 +370,67 @@ export function CommunicationClient() {
       },
       {
         onSuccess: () => {
-          toast.success("SMS campaign created successfully")
+          toast.success("SMS campaign sent immediately")
           setSmsCampaignName("")
           setSmsMessage("")
+          setSmsScheduledFor("")
         },
         onError: (err) => {
-          toast.error(err.message || "Failed to create SMS campaign")
+          toast.error(err.message || "Failed to send SMS campaign")
         },
       },
     )
+  }
+
+  function handleSmsSchedule() {
+    if (!smsScheduledFor) {
+      toast.info("Please select a date and time to schedule")
+      return
+    }
+    createSmsCampaign.mutate(
+      {
+        title: smsCampaignName,
+        body: smsMessage,
+        audience: selectedSmsAudience,
+        scheduled_for: smsScheduledFor,
+      },
+      {
+        onSuccess: () => {
+          toast.success("SMS campaign scheduled")
+          setSmsCampaignName("")
+          setSmsMessage("")
+          setSmsScheduledFor("")
+        },
+        onError: (err) => {
+          toast.error(err.message || "Failed to schedule SMS campaign")
+        },
+      },
+    )
+  }
+
+  function handleSmsSaveDraft() {
+    createSmsCampaign.mutate(
+      {
+        title: smsCampaignName,
+        body: smsMessage,
+        audience: selectedSmsAudience,
+      },
+      {
+        onSuccess: () => {
+          toast.success("SMS campaign saved as draft")
+          setSmsCampaignName("")
+          setSmsMessage("")
+          setSmsScheduledFor("")
+        },
+        onError: (err) => {
+          toast.error(err.message || "Failed to save draft")
+        },
+      },
+    )
+  }
+
+  function handleSmsSendTest() {
+    toast.info("Test SMS sending coming soon")
   }
 
   /* ---- stat values ---- */
@@ -357,7 +440,7 @@ export function CommunicationClient() {
   const pushSuppressions = stats.data ? String(stats.data.push_suppressions) : "—"
   const smsDrafts = stats.data ? String(stats.data.sms_drafts) : "—"
   const smsCampaignCount = stats.data ? String(stats.data.sms_sent + stats.data.sms_scheduled) : "—"
-  const smsScheduled = stats.data ? String(stats.data.sms_scheduled) : "0"
+  const smsScheduledCount = stats.data ? String(stats.data.sms_scheduled) : "—"
 
   return (
     <div className="space-y-6">
@@ -369,10 +452,6 @@ export function CommunicationClient() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="relative w-full min-w-[220px] max-w-[320px]">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Search..." />
-          </div>
           <Badge className="rounded-full px-3 py-1.5">ADMIN</Badge>
         </div>
       </div>
@@ -422,7 +501,9 @@ export function CommunicationClient() {
                     value={pushTitle}
                     onChange={(event) => setPushTitle(event.target.value)}
                     placeholder="e.g. White spot alert — North region"
+                    maxLength={100}
                   />
+                  <p className="text-right text-xs text-muted-foreground">{pushTitle.length}/100</p>
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Body</label>
@@ -431,6 +512,7 @@ export function CommunicationClient() {
                     onChange={(event) => setPushBody(event.target.value)}
                     placeholder="Message body — 160 character limit recommended for push..."
                     className="min-h-28"
+                    maxLength={160}
                   />
                   <p className="text-right text-xs text-muted-foreground">{pushBody.length} / 160 chars</p>
                 </div>
@@ -452,37 +534,45 @@ export function CommunicationClient() {
                       </button>
                     ))}
                   </div>
-                  <p className="text-sm text-muted-foreground">Estimated reach: <span className="font-semibold text-foreground">200 users</span></p>
+                  <p className="text-sm text-muted-foreground">Estimated reach: <span className="font-semibold text-foreground">{estimatedReach} users</span></p>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-2">
                     <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Category</label>
-                    <Input
+                    <select
                       value={pushCategory}
                       onChange={(event) => setPushCategory(event.target.value)}
-                      placeholder="e.g. alert, promo, update"
-                    />
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <option value="">Select category...</option>
+                      {pushCategoryOptions.map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Severity</label>
-                    <Input
+                    <select
                       value={pushSeverity}
                       onChange={(event) => setPushSeverity(event.target.value)}
-                      placeholder="e.g. low, medium, high"
-                    />
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <option value="">Select severity...</option>
+                      {pushSeverityOptions.map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-                <div className="space-y-3">
-                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Delivery</label>
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm">Send Now</Button>
-                    <Button size="sm" variant="outline">Schedule</Button>
-                    <Button size="sm" variant="outline">Save Draft</Button>
-                  </div>
-                </div>
-                <div className="flex justify-end">
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <Button variant="outline" onClick={handlePushSaveDraft} disabled={!pushTitle || !pushBody}>
+                    Save Draft
+                  </Button>
+                  <Button variant="outline" onClick={handlePushSchedule} disabled={!pushTitle || !pushBody}>
+                    Schedule
+                  </Button>
                   <Button onClick={handleSendNotification} disabled={sendBroadcast.isPending || !pushTitle || !pushBody}>
-                    {sendBroadcast.isPending ? "Sending..." : "Send Notification"}
+                    {sendBroadcast.isPending ? "Sending..." : "Send Now"}
                     <Send className="ml-2 size-4" />
                   </Button>
                 </div>
@@ -516,9 +606,8 @@ export function CommunicationClient() {
               </Card>
 
               <Card className="rounded-2xl">
-                <CardHeader className="flex-row items-center justify-between">
+                <CardHeader>
                   <CardTitle>Recent Sends</CardTitle>
-                  <Button variant="outline" size="sm">View All</Button>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {broadcastHistory.isLoading ? (
@@ -551,9 +640,9 @@ export function CommunicationClient() {
                   <div className="flex items-center justify-between rounded-xl border px-3 py-3">
                     <div>
                       <p className="text-sm font-medium">Scheduled</p>
-                      <p className="text-xs text-muted-foreground">2 broadcasts waiting for their send window</p>
+                      <p className="text-xs text-muted-foreground">{smsScheduledCount} broadcasts waiting for their send window</p>
                     </div>
-                    <Badge variant="secondary">2</Badge>
+                    <Badge variant="secondary">{smsScheduledCount}</Badge>
                   </div>
                   <div className="flex items-center justify-between rounded-xl border px-3 py-3">
                     <div>
@@ -605,7 +694,7 @@ export function CommunicationClient() {
               <KpiSkeleton count={3} />
             ) : (
               <>
-                <KpiCard title="SMS Campaigns" value={smsCampaignCount} subtitle={`${smsScheduled} queued right now`} icon={Smartphone} variant="green" />
+                <KpiCard title="SMS Campaigns" value={smsCampaignCount} subtitle={`${smsScheduledCount} queued right now`} icon={Smartphone} variant="green" />
                 <KpiCard title="Delivery Rate" value="94%" subtitle="Across recent sends" icon={CheckCircle2} variant="teal" />
                 <KpiCard title="Opt-Out Pressure" value="Low" subtitle={`${stats.data?.sms_suppressions ?? 0} flagged audiences`} icon={MessageSquare} variant="amber" />
               </>
@@ -624,7 +713,9 @@ export function CommunicationClient() {
                     value={smsCampaignName}
                     onChange={(event) => setSmsCampaignName(event.target.value)}
                     placeholder="e.g. February Feed Promo"
+                    maxLength={100}
                   />
+                  <p className="text-right text-xs text-muted-foreground">{smsCampaignName.length}/100</p>
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Message</label>
@@ -633,6 +724,7 @@ export function CommunicationClient() {
                     onChange={(event) => setSmsMessage(event.target.value)}
                     placeholder="SMS text — max 160 characters. Variables: {name}, {pond_count}, {pondscore}"
                     className="min-h-28"
+                    maxLength={160}
                   />
                   <p className="text-right text-xs text-muted-foreground">
                     {smsMessage.length} / 160 chars · Est. ₹0
@@ -657,7 +749,7 @@ export function CommunicationClient() {
                     ))}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Estimated reach: <span className="font-semibold text-foreground">200 users</span> · Est. cost: <span className="font-semibold text-foreground">₹100</span>
+                    Estimated reach: <span className="font-semibold text-foreground">{estimatedReach} users</span> · Est. cost: <span className="font-semibold text-foreground">—</span>
                   </p>
                   <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                     <span className="font-medium">SMS Billing:</span> ₹0.50/message · Balance: <span className="font-semibold">₹8,400</span> · Credit top-up available in Settings.
@@ -665,21 +757,33 @@ export function CommunicationClient() {
                 </div>
                 <div className="space-y-3">
                   <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Delivery</label>
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm">Send Now</Button>
-                    <Button size="sm" variant="outline">Schedule</Button>
-                    <Input className="h-9 w-[210px]" placeholder="dd/mm/yyyy, --:--" />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      type="datetime-local"
+                      className="h-9 w-[210px]"
+                      value={smsScheduledFor}
+                      onChange={(e) => setSmsScheduledFor(e.target.value)}
+                    />
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="outline">Save Draft</Button>
-                    <Button variant="outline">Send Test SMS</Button>
+                    <Button variant="outline" onClick={handleSmsSaveDraft} disabled={createSmsCampaign.isPending || !smsCampaignName || !smsMessage}>
+                      Save Draft
+                    </Button>
+                    <Button variant="outline" onClick={handleSmsSendTest}>
+                      Send Test SMS
+                    </Button>
                   </div>
-                  <Button onClick={handleLaunchSmsCampaign} disabled={createSmsCampaign.isPending || !smsCampaignName || !smsMessage}>
-                    {createSmsCampaign.isPending ? "Creating..." : "Launch Campaign"}
-                    <Send className="ml-2 size-4" />
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" onClick={handleSmsSchedule} disabled={createSmsCampaign.isPending || !smsCampaignName || !smsMessage}>
+                      Schedule
+                    </Button>
+                    <Button onClick={handleSmsSendNow} disabled={createSmsCampaign.isPending || !smsCampaignName || !smsMessage}>
+                      {createSmsCampaign.isPending ? "Creating..." : "Send Now"}
+                      <Send className="ml-2 size-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -713,13 +817,12 @@ export function CommunicationClient() {
                   </div>
                   <div className="flex items-center justify-between border-b pb-3">
                     <p className="text-sm text-muted-foreground">Opt-out rate</p>
-                    <p className="text-lg font-semibold text-emerald-600">0.7%</p>
+                    <p className="text-lg font-semibold text-emerald-600">—</p>
                   </div>
                   <div className="flex items-center justify-between border-b pb-3">
                     <p className="text-sm text-muted-foreground">Re-subscribed</p>
-                    <p className="text-lg font-semibold">3</p>
+                    <p className="text-lg font-semibold">—</p>
                   </div>
-                  <Button variant="outline">View Opt-Out List</Button>
                 </CardContent>
               </Card>
             </div>
@@ -893,7 +996,7 @@ export function CommunicationClient() {
                   <AnalyticsSummaryRow label="Highest performing message" value="Safety Alerts (91%)" valueClassName="text-emerald-600" />
                 </div>
 
-                <Button variant="outline">Download Analytics Report</Button>
+                <Button variant="outline" onClick={() => toast.info("Export coming soon")}>Download Analytics Report</Button>
               </CardContent>
             </Card>
           </div>
@@ -911,7 +1014,7 @@ export function CommunicationClient() {
                 <KpiCard title="Messages Sent" value={sentThisMonth} subtitle="This month" icon={Mail} variant="green" />
                 <KpiCard title="Avg Open Rate" value={avgOpenRate} subtitle="Across all sends" icon={CheckCircle2} variant="teal" />
                 <KpiCard title="Opt-Outs" value={totalSuppressions} subtitle="This month" icon={MessageSquare} variant="amber" />
-                <KpiCard title="Avg Recipients" value="200" subtitle="Per broadcast" icon={Users} variant="default" />
+                <KpiCard title="Avg Recipients" value={avgRecipients} subtitle="Per broadcast" icon={Users} variant="default" />
               </>
             )}
           </div>
@@ -960,12 +1063,12 @@ export function CommunicationClient() {
                 <p className="text-xs text-muted-foreground">This month</p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <ChannelMetric label="Push Notifications" summary="84 sent · 76% open rate" />
-                <ChannelMetric label="SMS" summary="38 sent · 91% open rate" />
-                <ChannelMetric label="Email" summary="20 sent · 72% open rate" />
+                <ChannelMetric label="Push Notifications" summary={channelPerformancePush} />
+                <ChannelMetric label="SMS" summary="—" />
+                <ChannelMetric label="Email" summary="—" />
                 <div className="grid grid-cols-3 gap-3 border-t pt-4 text-sm">
-                  <SummaryMetric label="Total delivered" value="139" className="text-emerald-600" />
-                  <SummaryMetric label="Failed" value="3" className="text-red-600" />
+                  <SummaryMetric label="Total delivered" value={totalDelivered} className="text-emerald-600" />
+                  <SummaryMetric label="Failed" value={totalFailed} className="text-red-600" />
                   <SummaryMetric label="Opt-outs" value={totalSuppressions} className="text-amber-600" />
                 </div>
               </CardContent>
@@ -974,7 +1077,7 @@ export function CommunicationClient() {
             <Card className="rounded-2xl">
               <CardHeader className="flex-row items-center justify-between">
                 <CardTitle>Opt-Out & Suppression List</CardTitle>
-                <Button variant="outline" size="sm">Export List</Button>
+                <Button variant="outline" size="sm" onClick={() => toast.info("Export coming soon")}>Export List</Button>
               </CardHeader>
               <CardContent>
                 {suppressions.isLoading ? (
