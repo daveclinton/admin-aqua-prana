@@ -31,47 +31,16 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { KpiCard } from "@/components/dashboard/kpi-card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import {
+  useOverviewStats,
+  usePondAnalytics,
+  useAquagptAnalytics,
+  useMarketplaceAnalytics,
+} from "@/features/analytics/hooks/use-analytics"
 
 const dateRanges = ["7D", "30D", "90D", "12M"] as const
-
-const regionData = [
-  { region: "Mumbai", farmers: 62, ponds: 186, score: 7.4, scoreColor: "text-emerald-600", gmv: "3.1L", alertRate: "4%", alertTag: "border-emerald-200 bg-emerald-50 text-emerald-700", alertLabel: "Low", trend: "+0.6", trendDir: "up" },
-  { region: "Chennai", farmers: 38, ponds: 95, score: 5.8, scoreColor: "text-amber-600", gmv: "1.9L", alertRate: "12%", alertTag: "border-amber-200 bg-amber-50 text-amber-700", alertLabel: "Med", trend: "stable", trendDir: "stable" },
-  { region: "Pune", farmers: 29, ponds: 72, score: 8.1, scoreColor: "text-emerald-600", gmv: "1.2L", alertRate: "3%", alertTag: "border-emerald-200 bg-emerald-50 text-emerald-700", alertLabel: "Low", trend: "+1.1", trendDir: "up" },
-  { region: "Kolkata", farmers: 24, ponds: 60, score: 3.9, scoreColor: "text-red-600", gmv: "0.8L", alertRate: "28%", alertTag: "border-red-200 bg-red-50 text-red-600", alertLabel: "High", trend: "-1.3", trendDir: "down" },
-  { region: "Delhi", farmers: 18, ponds: 44, score: 6.2, scoreColor: "text-amber-600", gmv: "0.6L", alertRate: "9%", alertTag: "border-amber-200 bg-amber-50 text-amber-700", alertLabel: "Med", trend: "+0.3", trendDir: "up" },
-] as const
-
-const speciesData = [
-  { species: "Shrimp", emoji: "🦐", ponds: 480, score: 5.9, scoreColor: "text-amber-600", mortality: "2.8%", fcr: "1.6", alert: "Med", alertTag: "border-amber-200 bg-amber-50 text-amber-700" },
-  { species: "Tilapia", emoji: "🐟", ponds: 520, score: 7.2, scoreColor: "text-emerald-600", mortality: "1.1%", fcr: "1.3", alert: "Low", alertTag: "border-emerald-200 bg-emerald-50 text-emerald-700" },
-  { species: "Catfish", emoji: "🐠", ponds: 148, score: 7.8, scoreColor: "text-emerald-600", mortality: "0.9%", fcr: "1.4", alert: "Low", alertTag: "border-emerald-200 bg-emerald-50 text-emerald-700" },
-  { species: "Carp", emoji: "🐡", ponds: 92, score: 4.1, scoreColor: "text-red-600", mortality: "3.4%", fcr: "2.1", alert: "High", alertTag: "border-red-200 bg-red-50 text-red-600" },
-] as const
-
-const pondHealthBuckets = [
-  { range: "0-3", count: 86, color: "bg-red-500", height: "h-[22%]" },
-  { range: "3-5", count: 112, color: "bg-amber-500", height: "h-[28%]" },
-  { range: "5-7", count: 468, color: "bg-emerald-400", height: "h-[75%]" },
-  { range: "7-9", count: 512, color: "bg-emerald-600", height: "h-[82%]" },
-  { range: "9-10", count: 62, color: "bg-emerald-800", height: "h-[16%]" },
-] as const
-
-const growthData = [
-  { month: "Aug", signups: 18, churned: 2 },
-  { month: "Sep", signups: 24, churned: 3 },
-  { month: "Oct", signups: 20, churned: 1 },
-  { month: "Nov", signups: 28, churned: 4 },
-  { month: "Dec", signups: 32, churned: 2 },
-  { month: "Jan", signups: 22, churned: 3 },
-] as const
-
-const revenueSegments = [
-  { label: "Marketplace", value: "5.8L", pct: "69%", color: "bg-emerald-500" },
-  { label: "Subscriptions", value: "1.7L", pct: "20%", color: "bg-blue-500" },
-  { label: "Services", value: "0.9L", pct: "11%", color: "bg-amber-500" },
-] as const
 
 const exportItems = [
   { label: "Farmer List", formats: ["CSV", "XLSX"] },
@@ -83,8 +52,86 @@ const exportItems = [
 
 const filterChips = ["All Regions", "Pro Plan Only", "Active Only", "Has Alerts"] as const
 
+/* ── helpers ── */
+
+function formatLakhs(value: number): string {
+  if (value >= 100000) return `${(value / 100000).toFixed(1)}L`
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}K`
+  return String(value)
+}
+
+function scoreColor(score: number): string {
+  if (score >= 7) return "text-emerald-600"
+  if (score >= 5) return "text-amber-600"
+  return "text-red-600"
+}
+
+function alertRateTag(rate: number): { label: string; className: string } {
+  if (rate < 5) return { label: "Low", className: "border-emerald-200 bg-emerald-50 text-emerald-700" }
+  if (rate <= 15) return { label: "Med", className: "border-amber-200 bg-amber-50 text-amber-700" }
+  return { label: "High", className: "border-red-200 bg-red-50 text-red-600" }
+}
+
+function alertFreqTag(freq: string): string {
+  const f = freq.toLowerCase()
+  if (f === "high") return "border-red-200 bg-red-50 text-red-600"
+  if (f === "med" || f === "medium") return "border-amber-200 bg-amber-50 text-amber-700"
+  return "border-emerald-200 bg-emerald-50 text-emerald-700"
+}
+
+function healthBarColor(range: string): string {
+  if (range.startsWith("0")) return "bg-red-500"
+  if (range.startsWith("3")) return "bg-amber-500"
+  if (range.startsWith("5")) return "bg-emerald-400"
+  if (range.startsWith("7")) return "bg-emerald-600"
+  return "bg-emerald-800"
+}
+
 export function AnalyticsClient() {
   const [activeRange, setActiveRange] = useState<string>("30D")
+
+  const overviewStats = useOverviewStats()
+  const pondAnalytics = usePondAnalytics(activeRange)
+  const aquagptAnalytics = useAquagptAnalytics(activeRange)
+  const marketplaceAnalytics = useMarketplaceAnalytics(activeRange)
+
+  const isKpiLoading =
+    overviewStats.isLoading ||
+    pondAnalytics.isLoading ||
+    aquagptAnalytics.isLoading ||
+    marketplaceAnalytics.isLoading
+
+  /* ── derived data ── */
+
+  const totalPonds = pondAnalytics.data?.overview?.total_ponds
+  const activeFarmers = overviewStats.data?.total_farmers
+  const gmvThisMonth = marketplaceAnalytics.data?.summary?.revenue_in_range
+  const avgPondscore = pondAnalytics.data?.overview?.avg_pondscore
+
+  const aquaSummary = aquagptAnalytics.data?.summary
+  const aquaAccuracy =
+    aquaSummary && aquaSummary.chats_in_range > 0
+      ? ((aquaSummary.resolutions / aquaSummary.chats_in_range) * 100).toFixed(1)
+      : undefined
+
+  const growthCohorts: { month: string; signups: number; churned: number }[] =
+    pondAnalytics.data?.growth_cohorts ?? []
+
+  const lastCohort = growthCohorts.length > 0 ? growthCohorts[growthCohorts.length - 1] : null
+
+  const marketSummary = marketplaceAnalytics.data?.summary
+  const totalRevenue = marketSummary?.total_revenue
+  const revenueInRange = marketSummary?.revenue_in_range
+
+  const regions = pondAnalytics.data?.regions ?? []
+
+  const healthDist: { range: string; count: number }[] =
+    pondAnalytics.data?.health_distribution ?? []
+  const maxHealthCount = healthDist.length > 0 ? Math.max(...healthDist.map((h) => h.count)) : 1
+
+  const species = pondAnalytics.data?.species ?? []
+
+  const dailyUsage = aquagptAnalytics.data?.daily_usage ?? []
 
   return (
     <div className="space-y-6">
@@ -126,11 +173,46 @@ export function AnalyticsClient() {
 
       {/* KPI Row */}
       <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
-        <KpiCard title="Total Ponds" value="1,240" icon={Waves} variant="green" trend="+48 this month" />
-        <KpiCard title="Active Farmers" value="200" icon={Users} variant="teal" trend="+22 this month" />
-        <KpiCard title="GMV This Month" value="₹8.4L" icon={BarChart3} variant="green" trend="+18% vs last" />
-        <KpiCard title="Avg Pondscore" value="6.8" icon={Activity} variant="default" trend="→ stable" />
-        <KpiCard title="AquaGPT Accuracy" value="94.2%" icon={Zap} variant="amber" trend="+2.1% this week" />
+        {isKpiLoading ? (
+          <>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-[140px] rounded-2xl" />
+            ))}
+          </>
+        ) : (
+          <>
+            <KpiCard
+              title="Total Ponds"
+              value={totalPonds != null ? totalPonds.toLocaleString() : "--"}
+              icon={Waves}
+              variant="green"
+            />
+            <KpiCard
+              title="Active Farmers"
+              value={activeFarmers != null ? activeFarmers.toLocaleString() : "--"}
+              icon={Users}
+              variant="teal"
+            />
+            <KpiCard
+              title="GMV This Month"
+              value={gmvThisMonth != null ? `\u20B9${formatLakhs(gmvThisMonth)}` : "--"}
+              icon={BarChart3}
+              variant="green"
+            />
+            <KpiCard
+              title="Avg Pondscore"
+              value={avgPondscore != null ? String(avgPondscore) : "--"}
+              icon={Activity}
+              variant="default"
+            />
+            <KpiCard
+              title="AquaGPT Accuracy"
+              value={aquaAccuracy != null ? `${aquaAccuracy}%` : "--"}
+              icon={Zap}
+              variant="amber"
+            />
+          </>
+        )}
       </div>
 
       {/* Row 1: Growth Cohorts + Revenue Breakdown */}
@@ -141,39 +223,53 @@ export function AnalyticsClient() {
             <CardTitle>Farmer Growth Cohorts</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Chart placeholder - area chart */}
-            <div className="relative h-48 rounded-xl bg-gradient-to-t from-emerald-50 to-transparent border border-border/60 overflow-hidden">
-              <div className="absolute inset-0 flex items-end justify-around px-4 pb-4">
-                {growthData.map((d) => (
-                  <div key={d.month} className="flex flex-col items-center gap-1">
-                    <div
-                      className="w-8 rounded-t-md bg-emerald-400/70"
-                      style={{ height: `${d.signups * 4}px` }}
-                    />
-                    <span className="text-[10px] text-muted-foreground">{d.month}</span>
+            {pondAnalytics.isLoading ? (
+              <Skeleton className="h-48 rounded-xl" />
+            ) : growthCohorts.length === 0 ? (
+              <div className="flex h-48 items-center justify-center rounded-xl border border-border/60 bg-muted/30 text-sm text-muted-foreground">
+                No cohort data available
+              </div>
+            ) : (
+              <>
+                {/* Chart placeholder - area chart */}
+                <div className="relative h-48 rounded-xl bg-gradient-to-t from-emerald-50 to-transparent border border-border/60 overflow-hidden">
+                  <div className="absolute inset-0 flex items-end justify-around px-4 pb-4">
+                    {growthCohorts.map((d) => (
+                      <div key={d.month} className="flex flex-col items-center gap-1">
+                        <div
+                          className="w-8 rounded-t-md bg-emerald-400/70"
+                          style={{ height: `${d.signups * 4}px` }}
+                        />
+                        <span className="text-[10px] text-muted-foreground">{d.month}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="absolute top-3 right-3 flex items-center gap-3 text-[10px]">
-                <span className="flex items-center gap-1">
-                  <span className="size-2 rounded-full bg-emerald-500" /> New signups
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="size-2 rounded-full bg-red-400" /> Churned
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 text-sm">
-              <span className="flex items-center gap-1 text-emerald-600">
-                <TrendingUp className="size-3.5" />
-                +22 new
-              </span>
-              <span className="flex items-center gap-1 text-red-500">
-                <TrendingDown className="size-3.5" />
-                -3 churned
-              </span>
-              <span className="text-muted-foreground">86% retention</span>
-            </div>
+                  <div className="absolute top-3 right-3 flex items-center gap-3 text-[10px]">
+                    <span className="flex items-center gap-1">
+                      <span className="size-2 rounded-full bg-emerald-500" /> New signups
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="size-2 rounded-full bg-red-400" /> Churned
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="flex items-center gap-1 text-emerald-600">
+                    <TrendingUp className="size-3.5" />
+                    +{lastCohort?.signups ?? 0} new
+                  </span>
+                  <span className="flex items-center gap-1 text-red-500">
+                    <TrendingDown className="size-3.5" />
+                    -{lastCohort?.churned ?? 0} churned
+                  </span>
+                  <span className="text-muted-foreground">
+                    {lastCohort && lastCohort.signups > 0
+                      ? `${Math.round(((lastCohort.signups - lastCohort.churned) / lastCohort.signups) * 100)}% retention`
+                      : "--"}
+                  </span>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -183,30 +279,50 @@ export function AnalyticsClient() {
             <CardTitle>Revenue Breakdown</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Donut chart placeholder */}
-            <div className="flex items-center justify-center py-4">
-              <div className="relative flex size-44 items-center justify-center">
-                <svg viewBox="0 0 100 100" className="size-full -rotate-90">
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="12" />
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="#10b981" strokeWidth="12" strokeDasharray="173.4 251.3" strokeDashoffset="0" strokeLinecap="round" />
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="#3b82f6" strokeWidth="12" strokeDasharray="50.3 251.3" strokeDashoffset="-173.4" strokeLinecap="round" />
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="#f59e0b" strokeWidth="12" strokeDasharray="27.6 251.3" strokeDashoffset="-223.7" strokeLinecap="round" />
-                </svg>
-                <div className="absolute text-center">
-                  <p className="text-lg font-bold">₹8.4L</p>
-                  <p className="text-[10px] text-muted-foreground">Total GMV</p>
+            {marketplaceAnalytics.isLoading ? (
+              <>
+                <div className="flex items-center justify-center py-4">
+                  <Skeleton className="size-44 rounded-full" />
                 </div>
-              </div>
-            </div>
-            <div className="flex justify-center gap-6">
-              {revenueSegments.map((seg) => (
-                <div key={seg.label} className="flex items-center gap-2 text-xs">
-                  <span className={cn("size-2.5 rounded-full", seg.color)} />
-                  <span className="text-muted-foreground">{seg.label}</span>
-                  <span className="font-semibold">₹{seg.value} · {seg.pct}</span>
+                <Skeleton className="h-5 w-full" />
+              </>
+            ) : (
+              <>
+                {/* Donut chart placeholder */}
+                <div className="flex items-center justify-center py-4">
+                  <div className="relative flex size-44 items-center justify-center">
+                    <svg viewBox="0 0 100 100" className="size-full -rotate-90">
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="12" />
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="#10b981" strokeWidth="12" strokeDasharray="173.4 251.3" strokeDashoffset="0" strokeLinecap="round" />
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="#3b82f6" strokeWidth="12" strokeDasharray="50.3 251.3" strokeDashoffset="-173.4" strokeLinecap="round" />
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="#f59e0b" strokeWidth="12" strokeDasharray="27.6 251.3" strokeDashoffset="-223.7" strokeLinecap="round" />
+                    </svg>
+                    <div className="absolute text-center">
+                      <p className="text-lg font-bold">
+                        {totalRevenue != null ? `\u20B9${formatLakhs(totalRevenue)}` : "--"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">Total GMV</p>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
+                <div className="flex justify-center gap-6">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={cn("size-2.5 rounded-full", "bg-emerald-500")} />
+                    <span className="text-muted-foreground">Revenue in Range</span>
+                    <span className="font-semibold">
+                      {revenueInRange != null ? `\u20B9${formatLakhs(revenueInRange)}` : "--"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={cn("size-2.5 rounded-full", "bg-blue-500")} />
+                    <span className="text-muted-foreground">Total Revenue</span>
+                    <span className="font-semibold">
+                      {totalRevenue != null ? `\u20B9${formatLakhs(totalRevenue)}` : "--"}
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -219,54 +335,54 @@ export function AnalyticsClient() {
             <CardTitle>Performance by Region</CardTitle>
           </CardHeader>
           <CardContent className="px-0">
-            <Table>
-              <TableHeader className="bg-[#f1f5ef]">
-                <TableRow className="hover:bg-[#f1f5ef]">
-                  <TableHead className="px-6">Region</TableHead>
-                  <TableHead>Farmers</TableHead>
-                  <TableHead>Ponds</TableHead>
-                  <TableHead>Avg Pondscore</TableHead>
-                  <TableHead>GMV (₹)</TableHead>
-                  <TableHead>Alert Rate</TableHead>
-                  <TableHead className="px-6">Trend</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {regionData.map((row) => (
-                  <TableRow key={row.region}>
-                    <TableCell className="px-4 font-medium">{row.region}</TableCell>
-                    <TableCell>{row.farmers}</TableCell>
-                    <TableCell>{row.ponds}</TableCell>
-                    <TableCell>
-                      <span className={cn("font-semibold", row.scoreColor)}>
-                        {row.score}
-                      </span>
-                    </TableCell>
-                    <TableCell>₹{row.gmv}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn("rounded-full px-2.5 py-1", row.alertTag)}
-                      >
-                        {row.alertLabel} {row.alertRate}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="px-6">
-                      <span
-                        className={cn(
-                          "text-sm font-medium",
-                          row.trendDir === "up" ? "text-emerald-600" :
-                          row.trendDir === "down" ? "text-red-500" :
-                          "text-muted-foreground"
-                        )}
-                      >
-                        {row.trendDir === "up" && "↑ "}{row.trendDir === "down" && "↓ "}{row.trend}
-                      </span>
-                    </TableCell>
-                  </TableRow>
+            {pondAnalytics.isLoading ? (
+              <div className="space-y-3 px-6">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            ) : regions.length === 0 ? (
+              <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+                No region data available
+              </div>
+            ) : (
+              <Table>
+                <TableHeader className="bg-[#f1f5ef]">
+                  <TableRow className="hover:bg-[#f1f5ef]">
+                    <TableHead className="px-6">Region</TableHead>
+                    <TableHead>Farmers</TableHead>
+                    <TableHead>Ponds</TableHead>
+                    <TableHead>Avg Pondscore</TableHead>
+                    <TableHead>Alert Rate</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {regions.map((row) => {
+                    const tag = alertRateTag(row.alert_rate)
+                    return (
+                      <TableRow key={row.region}>
+                        <TableCell className="px-4 font-medium">{row.region}</TableCell>
+                        <TableCell>{row.farmers}</TableCell>
+                        <TableCell>{row.ponds}</TableCell>
+                        <TableCell>
+                          <span className={cn("font-semibold", scoreColor(row.avg_pondscore ?? 0))}>
+                            {row.avg_pondscore ?? "--"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={cn("rounded-full px-2.5 py-1", tag.className)}
+                          >
+                            {tag.label} {row.alert_rate}%
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -276,21 +392,39 @@ export function AnalyticsClient() {
             <CardTitle>Pond Health Distribution</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex h-48 items-end justify-around gap-3 rounded-xl border border-border/60 bg-muted/30 px-6 pb-4 pt-8">
-              {pondHealthBuckets.map((bucket) => (
-                <div key={bucket.range} className="flex flex-1 flex-col items-center gap-2">
-                  <span className="text-xs font-semibold">{bucket.count}</span>
-                  <div className={cn("w-full max-w-[48px] rounded-t-md", bucket.color, bucket.height)} />
-                  <span className="text-[10px] text-muted-foreground">{bucket.range}</span>
+            {pondAnalytics.isLoading ? (
+              <Skeleton className="h-48 rounded-xl" />
+            ) : healthDist.length === 0 ? (
+              <div className="flex h-48 items-center justify-center rounded-xl border border-border/60 bg-muted/30 text-sm text-muted-foreground">
+                No health distribution data available
+              </div>
+            ) : (
+              <>
+                <div className="flex h-48 items-end justify-around gap-3 rounded-xl border border-border/60 bg-muted/30 px-6 pb-4 pt-8">
+                  {healthDist.map((bucket) => {
+                    const pct = Math.round((bucket.count / maxHealthCount) * 100)
+                    return (
+                      <div key={bucket.range} className="flex flex-1 flex-col items-center gap-2">
+                        <span className="text-xs font-semibold">{bucket.count}</span>
+                        <div
+                          className={cn("w-full max-w-[48px] rounded-t-md", healthBarColor(bucket.range))}
+                          style={{ height: `${pct}%` }}
+                        />
+                        <span className="text-[10px] text-muted-foreground">{bucket.range}</span>
+                      </div>
+                    )
+                  })}
                 </div>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-3 text-xs">
-              <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-red-500" /> 86 Critical</span>
-              <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-amber-500" /> 112 Low</span>
-              <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-emerald-400" /> 468 Medium</span>
-              <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-emerald-600" /> 574 Good+</span>
-            </div>
+                <div className="flex flex-wrap gap-3 text-xs">
+                  {healthDist.map((bucket) => (
+                    <span key={bucket.range} className="flex items-center gap-1">
+                      <span className={cn("size-2 rounded-full", healthBarColor(bucket.range))} />
+                      {bucket.count} ({bucket.range})
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -303,43 +437,51 @@ export function AnalyticsClient() {
             <CardTitle>Species Performance Comparison</CardTitle>
           </CardHeader>
           <CardContent className="px-0">
-            <Table>
-              <TableHeader className="bg-[#f1f5ef]">
-                <TableRow className="hover:bg-[#f1f5ef]">
-                  <TableHead className="px-6">Species</TableHead>
-                  <TableHead>Ponds</TableHead>
-                  <TableHead>Avg Pondscore</TableHead>
-                  <TableHead>Avg Mortality %</TableHead>
-                  <TableHead>Avg Feed FCR</TableHead>
-                  <TableHead className="px-6">Alert Freq</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {speciesData.map((row) => (
-                  <TableRow key={row.species}>
-                    <TableCell className="px-4 font-medium">
-                      {row.emoji} {row.species}
-                    </TableCell>
-                    <TableCell>{row.ponds}</TableCell>
-                    <TableCell>
-                      <span className={cn("font-semibold", row.scoreColor)}>
-                        {row.score}
-                      </span>
-                    </TableCell>
-                    <TableCell>{row.mortality}</TableCell>
-                    <TableCell>{row.fcr}</TableCell>
-                    <TableCell className="px-6">
-                      <Badge
-                        variant="outline"
-                        className={cn("rounded-full px-2.5 py-1", row.alertTag)}
-                      >
-                        {row.alert}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
+            {pondAnalytics.isLoading ? (
+              <div className="space-y-3 px-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            ) : species.length === 0 ? (
+              <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+                No species data available
+              </div>
+            ) : (
+              <Table>
+                <TableHeader className="bg-[#f1f5ef]">
+                  <TableRow className="hover:bg-[#f1f5ef]">
+                    <TableHead className="px-6">Species</TableHead>
+                    <TableHead>Ponds</TableHead>
+                    <TableHead>Avg Pondscore</TableHead>
+                    <TableHead className="px-6">Alert Freq</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {species.map((row) => (
+                    <TableRow key={row.species}>
+                      <TableCell className="px-4 font-medium">
+                        {row.species}
+                      </TableCell>
+                      <TableCell>{row.ponds}</TableCell>
+                      <TableCell>
+                        <span className={cn("font-semibold", scoreColor(row.avg_pondscore ?? 0))}>
+                          {row.avg_pondscore ?? "--"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-6">
+                        <Badge
+                          variant="outline"
+                          className={cn("rounded-full px-2.5 py-1", alertFreqTag(row.alert_frequency))}
+                        >
+                          {row.alert_frequency}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -349,40 +491,93 @@ export function AnalyticsClient() {
             <CardTitle>AquaGPT Usage Trends</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Line chart placeholder */}
-            <div className="relative h-48 rounded-xl border border-border/60 bg-gradient-to-t from-violet-50/50 to-transparent overflow-hidden">
-              <svg viewBox="0 0 300 120" className="absolute inset-0 size-full" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="gptGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                <path d="M0,100 L50,90 L100,75 L150,65 L200,45 L250,30 L300,20 L300,120 L0,120 Z" fill="url(#gptGrad)" />
-                <polyline points="0,100 50,90 100,75 150,65 200,45 250,30 300,20" fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="300" cy="20" r="4" fill="#8b5cf6" />
-              </svg>
-              <div className="absolute right-3 top-3 rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-semibold text-violet-700">
-                17.2K/mo
-              </div>
-              <div className="absolute bottom-3 left-0 flex w-full justify-around px-4 text-[10px] text-muted-foreground">
-                <span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="rounded-xl border p-3">
-                <p className="text-lg font-bold text-violet-600">17,250</p>
-                <p className="text-[10px] text-muted-foreground">queries/mo</p>
-              </div>
-              <div className="rounded-xl border p-3">
-                <p className="text-lg font-bold text-emerald-600">94.2%</p>
-                <p className="text-[10px] text-muted-foreground">resolved by AI</p>
-              </div>
-              <div className="rounded-xl border p-3">
-                <p className="text-lg font-bold text-red-500">34</p>
-                <p className="text-[10px] text-muted-foreground">escalated</p>
-              </div>
-            </div>
+            {aquagptAnalytics.isLoading ? (
+              <>
+                <Skeleton className="h-48 rounded-xl" />
+                <div className="grid grid-cols-3 gap-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-[72px] rounded-xl" />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Line chart placeholder */}
+                <div className="relative h-48 rounded-xl border border-border/60 bg-gradient-to-t from-violet-50/50 to-transparent overflow-hidden">
+                  <svg viewBox="0 0 300 120" className="absolute inset-0 size-full" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="gptGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.3" />
+                        <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    {dailyUsage.length > 1 ? (() => {
+                      const maxVal = Math.max(...dailyUsage.map((d) => d.chats), 1)
+                      const step = 300 / (dailyUsage.length - 1)
+                      const points = dailyUsage
+                        .map((d, i) => `${i * step},${120 - (d.chats / maxVal) * 100}`)
+                        .join(" ")
+                      const lastPt = dailyUsage[dailyUsage.length - 1]
+                      const lastX = (dailyUsage.length - 1) * step
+                      const lastY = 120 - (lastPt.chats / maxVal) * 100
+                      return (
+                        <>
+                          <path d={`M${points.split(" ").join(" L")} L300,120 L0,120 Z`} fill="url(#gptGrad)" />
+                          <polyline points={points} fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                          <circle cx={lastX} cy={lastY} r="4" fill="#8b5cf6" />
+                        </>
+                      )
+                    })() : (
+                      <>
+                        <path d="M0,100 L50,90 L100,75 L150,65 L200,45 L250,30 L300,20 L300,120 L0,120 Z" fill="url(#gptGrad)" />
+                        <polyline points="0,100 50,90 100,75 150,65 200,45 250,30 300,20" fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx="300" cy="20" r="4" fill="#8b5cf6" />
+                      </>
+                    )}
+                  </svg>
+                  <div className="absolute right-3 top-3 rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-semibold text-violet-700">
+                    {aquaSummary?.chats_in_range != null
+                      ? `${(aquaSummary.chats_in_range / 1000).toFixed(1)}K/mo`
+                      : "--"}
+                  </div>
+                  <div className="absolute bottom-3 left-0 flex w-full justify-around px-4 text-[10px] text-muted-foreground">
+                    {dailyUsage.length > 0
+                      ? dailyUsage
+                          .filter((_, i) => i % Math.max(1, Math.floor(dailyUsage.length / 6)) === 0)
+                          .slice(0, 6)
+                          .map((d) => <span key={d.date}>{d.date}</span>)
+                      : <>
+                          <span>--</span><span>--</span><span>--</span><span>--</span><span>--</span><span>--</span>
+                        </>
+                    }
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="rounded-xl border p-3">
+                    <p className="text-lg font-bold text-violet-600">
+                      {aquaSummary?.chats_in_range != null
+                        ? aquaSummary.chats_in_range.toLocaleString()
+                        : "--"}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">queries/mo</p>
+                  </div>
+                  <div className="rounded-xl border p-3">
+                    <p className="text-lg font-bold text-emerald-600">
+                      {aquaAccuracy != null ? `${aquaAccuracy}%` : "--"}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">resolved by AI</p>
+                  </div>
+                  <div className="rounded-xl border p-3">
+                    <p className="text-lg font-bold text-red-500">
+                      {aquaSummary?.escalated_count != null
+                        ? aquaSummary.escalated_count
+                        : "--"}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">escalated</p>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
