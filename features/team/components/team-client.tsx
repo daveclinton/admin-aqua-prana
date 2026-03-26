@@ -34,10 +34,23 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { KpiCard } from "@/components/dashboard/kpi-card"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   useTeamMembers,
   useTeamStats,
   useRolesConfig,
+  useInviteMember,
+  useUpdateMember,
   useRemoveMember,
+  useResendInvite,
   useUpdateRoleConfig,
 } from "@/features/team/hooks/use-team"
 import { useAuditLogs } from "@/features/settings/hooks/use-audit-logs"
@@ -131,8 +144,26 @@ export function TeamClient() {
   })
   const rolesQuery = useRolesConfig()
   const auditQuery = useAuditLogs({ limit: 20 })
+  const inviteMutation = useInviteMember()
+  const updateMemberMutation = useUpdateMember()
   const removeMutation = useRemoveMember()
+  const resendMutation = useResendInvite()
   const updateRoleMutation = useUpdateRoleConfig()
+
+  // Invite dialog state
+  const [showInvite, setShowInvite] = useState(false)
+  const [inviteForm, setInviteForm] = useState({ email: "", name: "", team_role: "agent" as TeamRole })
+
+  // Edit access dialog state
+  const [editMember, setEditMember] = useState<TeamMemberDTO | null>(null)
+  const [editRole, setEditRole] = useState<TeamRole>("agent")
+  const [editScreens, setEditScreens] = useState<string[]>([])
+
+  // Remove dialog state
+  const [removeMemberId, setRemoveMemberId] = useState<string | null>(null)
+  const [removeMemberName, setRemoveMemberName] = useState("")
+
+  const allScreenOptions = ["overview", "farmers", "passbook", "forum", "support", "analytics", "billing", "team", "settings"]
 
   const stats = statsQuery.data
   const members = membersQuery.data?.members ?? []
@@ -155,11 +186,63 @@ export function TeamClient() {
     return screens.find((s) => s.role === role && s.screen === screen)?.granted ?? false
   }
 
-  function handleRemove(memberId: string) {
-    removeMutation.mutate(memberId, {
-      onSuccess: () => toast.success("Team member removed"),
+  function handleInvite() {
+    if (!inviteForm.email || !inviteForm.name) {
+      toast.error("Email and name are required")
+      return
+    }
+    inviteMutation.mutate(inviteForm, {
+      onSuccess: () => {
+        toast.success("Invitation sent!")
+        setShowInvite(false)
+        setInviteForm({ email: "", name: "", team_role: "agent" })
+      },
+      onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to invite"),
+    })
+  }
+
+  function handleEditAccess() {
+    if (!editMember) return
+    updateMemberMutation.mutate(
+      { memberId: editMember.id, data: { team_role: editRole, screens: editScreens } },
+      {
+        onSuccess: () => {
+          toast.success("Access updated")
+          setEditMember(null)
+        },
+        onError: () => toast.error("Failed to update access"),
+      }
+    )
+  }
+
+  function openEditAccess(m: TeamMemberDTO) {
+    setEditMember(m)
+    setEditRole(m.team_role)
+    setEditScreens(m.screens ?? [])
+  }
+
+  function handleRemove() {
+    if (!removeMemberId) return
+    removeMutation.mutate(removeMemberId, {
+      onSuccess: () => {
+        toast.success("Team member removed")
+        setRemoveMemberId(null)
+      },
       onError: () => toast.error("Failed to remove member"),
     })
+  }
+
+  function handleResend(memberId: string) {
+    resendMutation.mutate(memberId, {
+      onSuccess: (res) => toast.success(`Invite resent to ${res.email}`),
+      onError: () => toast.error("Failed to resend invite"),
+    })
+  }
+
+  function toggleScreen(screen: string) {
+    setEditScreens((prev) =>
+      prev.includes(screen) ? prev.filter((s) => s !== screen) : [...prev, screen]
+    )
   }
 
   function formatAuditDate(dateStr: string) {
@@ -192,7 +275,7 @@ export function TeamClient() {
             <Download className="size-3.5" />
             Export
           </Button>
-          <Button className="rounded-full bg-[#1b4332] text-white hover:bg-[#244d39]">
+          <Button className="rounded-full bg-[#1b4332] text-white hover:bg-[#244d39]" onClick={() => setShowInvite(true)}>
             <UserPlus className="size-3.5" />
             Invite Member
           </Button>
@@ -330,13 +413,29 @@ export function TeamClient() {
                           <TableCell className="px-6">
                             <div className="flex gap-2">
                               {m.team_status === "invited" && (
-                                <Button variant="outline" size="sm" className="rounded-full border-amber-200 bg-amber-50 text-amber-700">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="rounded-full border-amber-200 bg-amber-50 text-amber-700"
+                                  disabled={resendMutation.isPending}
+                                  onClick={() => handleResend(m.id)}
+                                >
                                   Resend
                                 </Button>
                               )}
                               {m.team_role !== "super_admin" && (
-                                <Button variant="outline" size="sm" className="rounded-full">
+                                <Button variant="outline" size="sm" className="rounded-full" onClick={() => openEditAccess(m)}>
                                   Edit Access
+                                </Button>
+                              )}
+                              {m.team_role !== "super_admin" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="rounded-full border-red-200 text-red-600 hover:bg-red-50"
+                                  onClick={() => { setRemoveMemberId(m.id); setRemoveMemberName(getDisplayName(m)) }}
+                                >
+                                  Remove
                                 </Button>
                               )}
                             </div>
@@ -535,6 +634,143 @@ export function TeamClient() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* ── Invite Member Dialog ── */}
+      <AlertDialog open={showInvite} onOpenChange={setShowInvite}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Invite Team Member</AlertDialogTitle>
+            <AlertDialogDescription>
+              Send an invitation email with temporary login credentials.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3">
+            <div className="grid gap-1.5">
+              <label className="text-xs font-medium">Name</label>
+              <Input
+                placeholder="Full name"
+                value={inviteForm.name}
+                onChange={(e) => setInviteForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <label className="text-xs font-medium">Email</label>
+              <Input
+                type="email"
+                placeholder="email@example.com"
+                value={inviteForm.email}
+                onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <label className="text-xs font-medium">Role</label>
+              <div className="flex gap-2">
+                {roles.map((r) => (
+                  <Button
+                    key={r}
+                    type="button"
+                    variant={inviteForm.team_role === r ? "default" : "outline"}
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => setInviteForm((f) => ({ ...f, team_role: r }))}
+                  >
+                    {ROLE_LABELS[r]}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={inviteMutation.isPending || !inviteForm.email || !inviteForm.name}
+              onClick={(e) => { e.preventDefault(); handleInvite() }}
+            >
+              {inviteMutation.isPending ? "Sending..." : "Send Invite"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Edit Access Dialog ── */}
+      <AlertDialog open={!!editMember} onOpenChange={(open) => { if (!open) setEditMember(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Edit Access — {editMember ? getDisplayName(editMember) : ""}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Update role and screen access for this team member.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4">
+            <div className="grid gap-1.5">
+              <label className="text-xs font-medium">Role</label>
+              <div className="flex gap-2">
+                {roles.map((r) => (
+                  <Button
+                    key={r}
+                    type="button"
+                    variant={editRole === r ? "default" : "outline"}
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => setEditRole(r)}
+                  >
+                    {ROLE_LABELS[r]}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-1.5">
+              <label className="text-xs font-medium">Screen Access</label>
+              <div className="flex flex-wrap gap-2">
+                {allScreenOptions.map((screen) => (
+                  <Badge
+                    key={screen}
+                    variant={editScreens.includes(screen) ? "default" : "outline"}
+                    className={cn(
+                      "cursor-pointer rounded-full px-3 py-1.5 capitalize",
+                      editScreens.includes(screen) && "bg-[#1b4332] text-white hover:bg-[#244d39]"
+                    )}
+                    onClick={() => toggleScreen(screen)}
+                  >
+                    {screen}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={updateMemberMutation.isPending}
+              onClick={(e) => { e.preventDefault(); handleEditAccess() }}
+            >
+              {updateMemberMutation.isPending ? "Saving..." : "Save Changes"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Remove Member Dialog ── */}
+      <AlertDialog open={!!removeMemberId} onOpenChange={(open) => { if (!open) setRemoveMemberId(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {removeMemberName}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will revoke their admin access and demote them to a regular user. This action can be undone by re-inviting them.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-700"
+              disabled={removeMutation.isPending}
+              onClick={(e) => { e.preventDefault(); handleRemove() }}
+            >
+              {removeMutation.isPending ? "Removing..." : "Remove Member"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

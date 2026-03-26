@@ -26,6 +26,7 @@ import {
   X,
 } from "lucide-react"
 import { parseAsStringLiteral, useQueryState, useQueryStates } from "nuqs"
+import { toast } from "sonner"
 import { KpiCard } from "@/components/dashboard/kpi-card"
 import { DataTable } from "@/components/table/data-table"
 import { DataTableToolbar } from "@/components/table/data-table-toolbar"
@@ -39,6 +40,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -56,6 +58,25 @@ import {
 import { getSortingValue, resolveUpdater } from "@/lib/table/table-utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import {
+  useForumStats,
+  useTrendingTopics,
+  useExperts,
+  useUpdateExpert,
+  useContentList,
+  useContentStats,
+  useContentPerformance,
+  useContentCategories,
+  useUpdateContent,
+  useModerationStats,
+  useModerationQueue,
+  useModerationAction,
+  usePinPost,
+} from "@/features/community-forum/hooks/use-forum"
+import type {
+  ForumContentDTO,
+  ModerationQueueItemDTO,
+} from "@/features/community-forum/types"
 
 const workspaceTabs = ["discussions", "moderation"] as const
 type WorkspaceTab = (typeof workspaceTabs)[number]
@@ -72,255 +93,37 @@ const moderationContentSearchParams = createTableSearchParams({
   urlKeys: { globalFilter: "reviewQ", pageIndex: "reviewPage", pageSize: "reviewSize", sort: "reviewSort" },
 })
 
-const trendingTopics = [
-  {
-    title: "Best practices for white spot",
-    time: "2 days ago",
-    meta: "1.2k views · 30 replies",
-    state: "Trending",
-  },
-  {
-    title: "Probiotic recommendations",
-    time: "1 day ago",
-    meta: "1.0k views · 20 replies",
-    state: "Trending",
-  },
-  {
-    title: "DO management during monsoon season",
-    time: "4 hours ago",
-    meta: "880 views · 14 replies",
-    state: "Rising",
-  },
-] as const
+/* ── Row types for local tables ── */
 
-const experts = [
-  {
-    name: "Dr. Kumar",
-    specialty: "Water Quality",
-    rating: "4.9",
-    status: "Verified",
-    pending: false,
-  },
-  {
-    name: "Anand Pn",
-    specialty: "Feed management",
-    rating: "Pending review",
-    status: "Needs Review",
-    pending: true,
-  },
-  {
-    name: "Dr. Meera Singh",
-    specialty: "Disease mitigation",
-    rating: "4.8",
-    status: "Verified",
-    pending: false,
-  },
-] as const
+type DiscussionContentRow = {
+  id: string
+  title: string
+  type: string
+  category: string
+  author: string
+  views: string
+  readRate: string
+  published: string
+  status: string
+  actions: string[]
+  _contentId: string
+}
 
-const discussionContentRows = [
-  {
-    title: "Feeding Best Practices for Shrimp",
-    type: "Article",
-    category: "Feeding",
-    author: "Dr. Kumar",
-    views: "12,400",
-    readRate: "82%",
-    published: "Jan 18",
-    status: "Published",
-    actions: ["Edit", "Archive"],
-  },
-  {
-    title: "Disease Management - Video Series",
-    type: "Video",
-    category: "Disease",
-    author: "Admin",
-    views: "8,200",
-    readRate: "68%",
-    published: "Dec 22",
-    status: "Published",
-    actions: ["Edit", "Archive"],
-  },
-  {
-    title: "DO Management & Aerator Guide",
-    type: "Article",
-    category: "Water Quality",
-    author: "Admin",
-    views: "—",
-    readRate: "—",
-    published: "Not published",
-    status: "Draft",
-    actions: ["Edit & Publish"],
-  },
-  {
-    title: "Optimal Pond Preparation Guide",
-    type: "Article",
-    category: "Pond Prep",
-    author: "Dr. Kumar",
-    views: "9,800",
-    readRate: "74%",
-    published: "Nov 16",
-    status: "Published",
-    actions: ["Edit", "Archive"],
-  },
-  {
-    title: "White Spot Disease Prevention",
-    type: "Article",
-    category: "Disease",
-    author: "Admin",
-    views: "—",
-    readRate: "—",
-    published: "Not published",
-    status: "Draft",
-    actions: ["Edit & Publish"],
-  },
-  {
-    title: "Ammonia Control in High-Density Ponds",
-    type: "Article",
-    category: "Water Quality",
-    author: "Dr. Meera",
-    views: "6,100",
-    readRate: "59%",
-    published: "Oct 5",
-    status: "Published",
-    actions: ["Edit", "Archive"],
-  },
-] as const
+type ModerationContentRow = {
+  id: string
+  title: string
+  type: string
+  reason: string
+  flaggedBy: string
+  reports: string
+  published: string
+  status: string
+  actions: { label: string; tone: "red" | "green" | "slate" }[]
+  _targetType: "post" | "reply" | "content"
+  _targetId: string
+}
 
-const contentCategories = [
-  { category: "Water Quality", articles: "8", videos: "2", views: "12k" },
-  { category: "Disease Management", articles: "6", videos: "3", views: "18k" },
-  { category: "Feeding", articles: "4", videos: "2", views: "12k" },
-  { category: "Pond Preparation", articles: "6", videos: "1", views: "9k" },
-] as const
-
-const contentPerformance = [
-  { label: "Avg completion rate", value: "74%" },
-  { label: "Top performing", value: "Feeding Best Practices" },
-  { label: "Most shared", value: "Disease Management Video" },
-  { label: "Needs update (30 days)", value: "3 articles" },
-  { label: "Awaiting approval", value: "2 drafts" },
-] as const
-
-const categoryViewBars = [
-  { label: "Water Quality", value: "22k", width: "w-[86%]", color: "bg-blue-500" },
-  { label: "Disease Mgmt", value: "18k", width: "w-[72%]", color: "bg-red-500" },
-  { label: "Feeding", value: "12k", width: "w-[52%]", color: "bg-emerald-500" },
-] as const
-
-const moderationFilterChips = [
-  { label: "All", count: 24, active: true },
-  { label: "Spam", count: 8, active: false },
-  { label: "Misinformation", count: 9, active: false },
-  { label: "Offensive", count: 7, active: false },
-] as const
-
-const moderationQueue = [
-  {
-    id: "mq-1",
-    initials: "AB",
-    user: "AnonUser123",
-    reason: "Misinformation",
-    reports: "Flagged by 12 users",
-    time: "2 hours ago",
-    quote:
-      '"Adding bleach to your pond will kill all bacteria and improve DO levels instantly. This worked for me on 3 ponds."',
-    context:
-      'Flagged in: "Water Quality Tips" thread · Post ID: #P-3041 · Thread: Best practices for improving DO',
-    actions: [
-      { label: "Keep Post", tone: "green", icon: Check },
-      { label: "Remove Post", tone: "red", icon: X },
-      { label: "Warn User", tone: "slate", icon: AlertTriangle },
-      { label: "Ban User", tone: "purple", icon: Gavel },
-      { label: "Pin Correction", tone: "slate", icon: Pin },
-    ],
-  },
-  {
-    id: "mq-2",
-    initials: "S2",
-    user: "Seller2Promo",
-    reason: "Spam",
-    reports: "Flagged by 5 users",
-    time: "4 hours ago",
-    quote:
-      '"Buy our miracle feed supplement and double your yield in 2 weeks! Click here: [external link] — limited time offer only £299"',
-    context:
-      'Flagged in: "Product Recommendations" thread · Post ID: #P-3055 · User history: 3 prior spam warnings',
-    actions: [
-      { label: "Keep Post", tone: "green", icon: Check },
-      { label: "Remove Post", tone: "red", icon: X },
-      { label: "Warn User", tone: "slate", icon: AlertTriangle },
-      { label: "Ban User", tone: "purple", icon: Gavel },
-    ],
-  },
-] as const
-
-const moderationContentRows = [
-  {
-    title: "Adding bleach improves DO — comment thread link",
-    type: "Forum Post",
-    reason: "Misinformation",
-    flaggedBy: "12 users",
-    reports: "12",
-    published: "Active",
-    status: "Urgent",
-    actions: [
-      { label: "Remove", tone: "red" },
-      { label: "Review", tone: "slate" },
-    ],
-  },
-  {
-    title: "Pond Preparation Guide (2023)",
-    type: "Article",
-    reason: "Outdated Info",
-    flaggedBy: "3 users",
-    reports: "3",
-    published: "Nov 2023",
-    status: "Needs Update",
-    actions: [
-      { label: "Edit Article", tone: "green" },
-      { label: "Dismiss", tone: "slate" },
-    ],
-  },
-  {
-    title: "Ammonia treatment with raw chemicals",
-    type: "Article",
-    reason: "Safety Risk",
-    flaggedBy: "Auto-flagged",
-    reports: "—",
-    published: "Dec 2024",
-    status: "Under Review",
-    actions: [
-      { label: "Unpublish", tone: "red" },
-      { label: "Edit", tone: "slate" },
-    ],
-  },
-  {
-    title: "Feed rate table — incorrect FCR values",
-    type: "Article",
-    reason: "Factual Error",
-    flaggedBy: "2 users",
-    reports: "2",
-    published: "Jan 2025",
-    status: "Needs Update",
-    actions: [
-      { label: "Edit Article", tone: "green" },
-      { label: "Dismiss", tone: "slate" },
-    ],
-  },
-] as const
-
-type DiscussionContentRow = (typeof discussionContentRows)[number] & { id: string }
-type ModerationContentRow = (typeof moderationContentRows)[number] & { id: string }
-
-const discussionContentTableRows: DiscussionContentRow[] = discussionContentRows.map((row, index) => ({
-  id: `content-${index + 1}`,
-  ...row,
-}))
-
-const moderationContentTableRows: ModerationContentRow[] = moderationContentRows.map((row, index) => ({
-  id: `review-${index + 1}`,
-  ...row,
-}))
+/* ── Helper functions (unchanged styling) ── */
 
 function moderationBadgeStyles(tone: "red" | "amber" | "green" | "blue" | "slate") {
   switch (tone) {
@@ -350,183 +153,396 @@ function moderationActionStyles(tone: "red" | "green" | "purple" | "slate") {
   }
 }
 
-const discussionContentColumns: ColumnDef<DiscussionContentRow>[] = [
-  {
-    accessorKey: "title",
-    header: "Title",
-    cell: ({ row }) => <span className="font-medium">{row.original.title}</span>,
-  },
-  {
-    accessorKey: "type",
-    header: "Type",
-    cell: ({ row }) => (
-      <Badge
-        variant="outline"
-        className={cn(
-          "rounded-full px-2.5 py-1",
-          row.original.type === "Video"
-            ? "border-violet-200 bg-violet-50 text-violet-700"
-            : "border-blue-200 bg-blue-50 text-blue-700"
-        )}
-      >
-        {row.original.type}
-      </Badge>
-    ),
-  },
-  { accessorKey: "category", header: "Category" },
-  { accessorKey: "author", header: "Author" },
-  { accessorKey: "views", header: "Views" },
-  {
-    accessorKey: "readRate",
-    header: "Read %",
-    cell: ({ row }) => (
-      <span
-        className={cn(
-          row.original.readRate === "82%" || row.original.readRate === "74%"
-            ? "text-emerald-600"
-            : row.original.readRate === "59%"
-              ? "text-amber-600"
-              : "text-muted-foreground"
-        )}
-      >
-        {row.original.readRate}
-      </span>
-    ),
-  },
-  { accessorKey: "published", header: "Published" },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => (
-      <Badge
-        variant="outline"
-        className={cn(
-          "rounded-full px-2.5 py-1",
-          row.original.status === "Published"
-            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-            : "border-amber-200 bg-amber-50 text-amber-700"
-        )}
-      >
-        {row.original.status}
-      </Badge>
-    ),
-  },
-  {
-    id: "actions",
-    header: "Actions",
-    enableSorting: false,
-    cell: ({ row }) => (
-      <div className="flex flex-wrap gap-2">
-        {row.original.actions.map((action) => (
-          <Button
-            key={action}
-            variant="outline"
-            size="sm"
-            className={cn(
-              "rounded-full text-[0.625rem]",
-              action === "Edit & Publish"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                : ""
-            )}
-          >
-            {action}
-          </Button>
-        ))}
-      </div>
-    ),
-  },
-]
+function formatNumber(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`.replace(".0k", "k")
+  return String(n)
+}
 
-const moderationContentColumns: ColumnDef<ModerationContentRow>[] = [
-  {
-    accessorKey: "title",
-    header: "Title",
-    cell: ({ row }) => <span className="font-medium">{row.original.title}</span>,
-  },
-  {
-    accessorKey: "type",
-    header: "Type",
-    cell: ({ row }) => (
-      <Badge
-        variant="outline"
-        className={cn("rounded-full px-2.5 py-1", moderationBadgeStyles("blue"))}
-      >
-        {row.original.type}
-      </Badge>
-    ),
-  },
-  {
-    accessorKey: "reason",
-    header: "Flag Reason",
-    cell: ({ row }) => (
-      <Badge
-        variant="outline"
-        className={cn(
-          "rounded-full px-2.5 py-1",
-          moderationBadgeStyles(
-            row.original.reason === "Misinformation" || row.original.reason === "Safety Risk"
-              ? "red"
-              : "amber"
-          )
-        )}
-      >
-        {row.original.reason}
-      </Badge>
-    ),
-  },
-  { accessorKey: "flaggedBy", header: "Flagged By" },
-  { accessorKey: "reports", header: "Reports" },
-  { accessorKey: "published", header: "Published" },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => (
-      <Badge
-        variant="outline"
-        className={cn(
-          "rounded-full px-2.5 py-1",
-          moderationBadgeStyles(
-            row.original.status === "Urgent" || row.original.status === "Under Review"
-              ? "red"
-              : "amber"
-          )
-        )}
-      >
-        {row.original.status}
-      </Badge>
-    ),
-  },
-  {
-    id: "actions",
-    header: "Actions",
-    enableSorting: false,
-    cell: ({ row }) => (
-      <div className="flex flex-wrap gap-2">
-        {row.original.actions.map((action) => (
-          <Button
-            key={action.label}
-            variant="outline"
-            size="sm"
-            className={cn(
-              "rounded-lg border text-xs shadow-none",
-              moderationActionStyles(action.tone)
-            )}
-          >
-            {action.label}
-          </Button>
-        ))}
-      </div>
-    ),
-  },
-]
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 60) return `${mins} minutes ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours} hours ago`
+  const days = Math.floor(hours / 24)
+  return `${days} days ago`
+}
+
+function formatContentRow(item: ForumContentDTO, index: number): DiscussionContentRow {
+  const isPub = item.status === "published"
+  return {
+    id: item.id,
+    title: item.title,
+    type: item.type === "video" ? "Video" : "Article",
+    category: item.category ?? "—",
+    author: item.author_name,
+    views: isPub ? formatNumber(item.views) : "—",
+    readRate: item.read_rate != null ? `${item.read_rate}%` : "—",
+    published: item.published_at
+      ? new Date(item.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+      : "Not published",
+    status: isPub ? "Published" : item.status === "archived" ? "Archived" : "Draft",
+    actions: isPub ? ["Edit", "Archive"] : ["Edit & Publish"],
+    _contentId: item.id,
+  }
+}
+
+function formatModerationContentRow(item: ModerationQueueItemDTO): ModerationContentRow {
+  const isUrgent = item.report_count >= 10
+  return {
+    id: item.report_id,
+    title: `${item.body_excerpt.slice(0, 60)}...`,
+    type: item.target_type === "content" ? "Article" : "Forum Post",
+    reason: item.reason,
+    flaggedBy: `${item.report_count} users`,
+    reports: String(item.report_count),
+    published: "Active",
+    status: isUrgent ? "Urgent" : "Needs Update",
+    actions:
+      item.target_type === "content"
+        ? [
+            { label: "Edit Article", tone: "green" as const },
+            { label: "Dismiss", tone: "slate" as const },
+          ]
+        : [
+            { label: "Remove", tone: "red" as const },
+            { label: "Review", tone: "slate" as const },
+          ],
+    _targetType: item.target_type,
+    _targetId: item.target_id,
+  }
+}
+
+/* ── Skeleton helpers ── */
+
+function KpiSkeleton() {
+  return <Skeleton className="h-[100px] w-full rounded-2xl" />
+}
+
+function CardListSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-start justify-between gap-4 border-t border-border/60 py-3 first:border-t-0 first:pt-0">
+          <div className="flex items-start gap-3">
+            <Skeleton className="mt-0.5 size-6 rounded-full" />
+            <div className="space-y-1">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </div>
+          <Skeleton className="h-6 w-16 rounded-full" />
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export function CommunityForumClient() {
   const [workspace, setWorkspace] = useQueryState(
     "workspace",
     parseAsStringLiteral(workspaceTabs).withDefault("discussions")
   )
+  const [moderationFilter, setModerationFilter] = useState<string | undefined>(undefined)
 
   const currentWorkspace = workspace ?? "discussions"
+
+  /* ── Queries ── */
+  const forumStats = useForumStats()
+  const trendingTopics = useTrendingTopics()
+  const expertsQuery = useExperts({ limit: 5 })
+  const contentList = useContentList()
+  const contentStats = useContentStats()
+  const contentPerf = useContentPerformance()
+  const contentCategories = useContentCategories()
+  const moderationStats = useModerationStats()
+  const moderationQueue = useModerationQueue({ reason: moderationFilter, limit: 10 })
+  const flaggedContent = useModerationQueue({ target_type: "content" })
+
+  /* ── Mutations ── */
+  const updateExpert = useUpdateExpert()
+  const updateContent = useUpdateContent()
+  const moderationAction = useModerationAction()
+  const pinPost = usePinPost()
+
+  /* ── Derived data ── */
+  const discussionContentTableRows: DiscussionContentRow[] = useMemo(
+    () => (contentList.data?.items ?? []).map((item, i) => formatContentRow(item, i)),
+    [contentList.data]
+  )
+
+  const moderationContentTableRows: ModerationContentRow[] = useMemo(
+    () => (flaggedContent.data?.items ?? []).map((item) => formatModerationContentRow(item)),
+    [flaggedContent.data]
+  )
+
+  /* ── Moderation filter chips ── */
+  const countsByReason = moderationQueue.data?.counts_by_reason ?? {}
+  const totalModerationCount = moderationStats.data?.pending_review ?? 0
+  const moderationFilterChips = useMemo(() => {
+    const chips: { label: string; count: number; active: boolean }[] = [
+      { label: "All", count: totalModerationCount, active: moderationFilter === undefined },
+    ]
+    for (const [reason, count] of Object.entries(countsByReason)) {
+      chips.push({ label: reason, count, active: moderationFilter === reason })
+    }
+    return chips
+  }, [countsByReason, totalModerationCount, moderationFilter])
+
+  /* ── Content performance rows ── */
+  const perfRows = useMemo(() => {
+    if (!contentPerf.data) return []
+    const d = contentPerf.data
+    return [
+      { label: "Avg completion rate", value: d.avg_completion_rate != null ? `${d.avg_completion_rate}%` : "—" },
+      { label: "Top performing", value: d.top_performing?.title ?? "—" },
+      { label: "Most shared", value: d.most_shared?.title ?? "—" },
+      { label: "Needs update (30 days)", value: `${d.needs_update} articles` },
+      { label: "Awaiting approval", value: `${d.awaiting_approval} drafts` },
+    ]
+  }, [contentPerf.data])
+
+  /* ── Category view bars ── */
+  const categoryViewBars = useMemo(() => {
+    if (!contentPerf.data?.views_by_category?.length) return []
+    const cats = contentPerf.data.views_by_category
+    const maxViews = Math.max(...cats.map((c) => c.views), 1)
+    const colors = ["bg-blue-500", "bg-red-500", "bg-emerald-500", "bg-amber-500", "bg-violet-500"]
+    return cats.map((c, i) => ({
+      label: c.category,
+      value: formatNumber(c.views),
+      widthPercent: Math.round((c.views / maxViews) * 100),
+      color: colors[i % colors.length],
+    }))
+  }, [contentPerf.data])
+
+  /* ── Column defs (content table) ── */
+  const discussionContentColumns: ColumnDef<DiscussionContentRow>[] = useMemo(
+    () => [
+      {
+        accessorKey: "title",
+        header: "Title",
+        cell: ({ row }) => <span className="font-medium">{row.original.title}</span>,
+      },
+      {
+        accessorKey: "type",
+        header: "Type",
+        cell: ({ row }) => (
+          <Badge
+            variant="outline"
+            className={cn(
+              "rounded-full px-2.5 py-1",
+              row.original.type === "Video"
+                ? "border-violet-200 bg-violet-50 text-violet-700"
+                : "border-blue-200 bg-blue-50 text-blue-700"
+            )}
+          >
+            {row.original.type}
+          </Badge>
+        ),
+      },
+      { accessorKey: "category", header: "Category" },
+      { accessorKey: "author", header: "Author" },
+      { accessorKey: "views", header: "Views" },
+      {
+        accessorKey: "readRate",
+        header: "Read %",
+        cell: ({ row }) => {
+          const rate = parseInt(row.original.readRate)
+          return (
+            <span
+              className={cn(
+                !isNaN(rate) && rate >= 70
+                  ? "text-emerald-600"
+                  : !isNaN(rate) && rate < 65
+                    ? "text-amber-600"
+                    : "text-muted-foreground"
+              )}
+            >
+              {row.original.readRate}
+            </span>
+          )
+        },
+      },
+      { accessorKey: "published", header: "Published" },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => (
+          <Badge
+            variant="outline"
+            className={cn(
+              "rounded-full px-2.5 py-1",
+              row.original.status === "Published"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-amber-200 bg-amber-50 text-amber-700"
+            )}
+          >
+            {row.original.status}
+          </Badge>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-2">
+            {row.original.actions.map((action) => (
+              <Button
+                key={action}
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "rounded-full text-[0.625rem]",
+                  action === "Edit & Publish"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : ""
+                )}
+                onClick={() => {
+                  const id = row.original._contentId
+                  if (action === "Archive") {
+                    updateContent.mutate(
+                      { id, data: { status: "archived" } },
+                      {
+                        onSuccess: () => toast.success("Content archived"),
+                        onError: () => toast.error("Failed to archive content"),
+                      }
+                    )
+                  } else if (action === "Edit & Publish") {
+                    updateContent.mutate(
+                      { id, data: { status: "published" } },
+                      {
+                        onSuccess: () => toast.success("Content published"),
+                        onError: () => toast.error("Failed to publish content"),
+                      }
+                    )
+                  } else if (action === "Edit") {
+                    toast.info("Edit content: navigate to content editor")
+                  }
+                }}
+              >
+                {action}
+              </Button>
+            ))}
+          </div>
+        ),
+      },
+    ],
+    [updateContent]
+  )
+
+  /* ── Column defs (moderation content table) ── */
+  const moderationContentColumns: ColumnDef<ModerationContentRow>[] = useMemo(
+    () => [
+      {
+        accessorKey: "title",
+        header: "Title",
+        cell: ({ row }) => <span className="font-medium">{row.original.title}</span>,
+      },
+      {
+        accessorKey: "type",
+        header: "Type",
+        cell: ({ row }) => (
+          <Badge
+            variant="outline"
+            className={cn("rounded-full px-2.5 py-1", moderationBadgeStyles("blue"))}
+          >
+            {row.original.type}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: "reason",
+        header: "Flag Reason",
+        cell: ({ row }) => (
+          <Badge
+            variant="outline"
+            className={cn(
+              "rounded-full px-2.5 py-1",
+              moderationBadgeStyles(
+                row.original.reason === "Misinformation" || row.original.reason === "Safety Risk"
+                  ? "red"
+                  : "amber"
+              )
+            )}
+          >
+            {row.original.reason}
+          </Badge>
+        ),
+      },
+      { accessorKey: "flaggedBy", header: "Flagged By" },
+      { accessorKey: "reports", header: "Reports" },
+      { accessorKey: "published", header: "Published" },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => (
+          <Badge
+            variant="outline"
+            className={cn(
+              "rounded-full px-2.5 py-1",
+              moderationBadgeStyles(
+                row.original.status === "Urgent" || row.original.status === "Under Review"
+                  ? "red"
+                  : "amber"
+              )
+            )}
+          >
+            {row.original.status}
+          </Badge>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-2">
+            {row.original.actions.map((action) => (
+              <Button
+                key={action.label}
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "rounded-lg border text-xs shadow-none",
+                  moderationActionStyles(action.tone)
+                )}
+                onClick={() => {
+                  const r = row.original
+                  if (action.label === "Remove" || action.label === "Unpublish") {
+                    moderationAction.mutate(
+                      { target_type: r._targetType, target_id: r._targetId, action: "remove" },
+                      {
+                        onSuccess: () => toast.success("Content removed"),
+                        onError: () => toast.error("Failed to remove content"),
+                      }
+                    )
+                  } else if (action.label === "Dismiss") {
+                    moderationAction.mutate(
+                      { target_type: r._targetType, target_id: r._targetId, action: "keep" },
+                      {
+                        onSuccess: () => toast.success("Report dismissed"),
+                        onError: () => toast.error("Failed to dismiss report"),
+                      }
+                    )
+                  } else if (action.label === "Edit Article" || action.label === "Edit") {
+                    toast.info("Navigate to content editor")
+                  } else if (action.label === "Review") {
+                    toast.info("Navigate to review details")
+                  }
+                }}
+              >
+                {action.label}
+              </Button>
+            ))}
+          </div>
+        ),
+      },
+    ],
+    [moderationAction]
+  )
 
   return (
     <div className="space-y-6">
@@ -557,59 +573,104 @@ export function CommunityForumClient() {
           </TabsTrigger>
           <TabsTrigger value="moderation" className="gap-1.5">
             <Shield className="size-3.5" />
-            Moderation (24)
+            Moderation ({moderationStats.isLoading ? "..." : moderationStats.data?.pending_review ?? 0})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="discussions" className="space-y-6 pt-4">
           <div className="flex justify-end">
-            <Button className="rounded-full bg-[#1b4332] px-3 text-white hover:bg-[#244d39]">
+            <Button
+              className="rounded-full bg-[#1b4332] px-3 text-white hover:bg-[#244d39]"
+              onClick={() => {
+                toast.info("Select a post to pin as announcement")
+              }}
+            >
               <Megaphone className="size-3.5" />
               Pin Announcement
             </Button>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-4">
-            <KpiCard title="Active Discussions" value="800" icon={MessageCircle} variant="default" />
-            <KpiCard title="Total Posts" value="12,000" icon={MessageCircle} variant="default" />
-            <KpiCard title="Active Members" value="8,000" icon={Users} variant="default" />
-            <KpiCard title="Flagged Content" value="24" icon={Flag} variant="red" />
-          </div>
+          {/* ── Discussion KPIs ── */}
+          {forumStats.isLoading ? (
+            <div className="grid gap-4 xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <KpiSkeleton key={i} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-4 xl:grid-cols-4">
+              <KpiCard
+                title="Active Discussions"
+                value={formatNumber(forumStats.data?.active_discussions ?? 0)}
+                icon={MessageCircle}
+                variant="default"
+              />
+              <KpiCard
+                title="Total Posts"
+                value={formatNumber(forumStats.data?.total_posts ?? 0)}
+                icon={MessageCircle}
+                variant="default"
+              />
+              <KpiCard
+                title="Active Members"
+                value={formatNumber(forumStats.data?.active_members ?? 0)}
+                icon={Users}
+                variant="default"
+              />
+              <KpiCard
+                title="Flagged Content"
+                value={String(forumStats.data?.flagged_content ?? 0)}
+                icon={Flag}
+                variant="red"
+              />
+            </div>
+          )}
 
+          {/* ── Trending + Expert Directory ── */}
           <div className="grid gap-4 xl:grid-cols-2">
             <Card className="rounded-2xl border border-border/80 py-0">
               <CardHeader>
                 <CardTitle>Trending Topics</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {trendingTopics.map((topic, index) => (
-                  <div
-                    key={topic.title}
-                    className="flex items-start justify-between gap-4 border-t border-border/60 py-3 first:border-t-0 first:pt-0"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 flex size-6 items-center justify-center rounded-full bg-emerald-50 text-[0.625rem] font-semibold text-emerald-700">
-                        {index + 1}
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold">{topic.title}</p>
-                        <p className="text-xs text-muted-foreground">{topic.time}</p>
-                        <p className="text-xs text-muted-foreground">{topic.meta}</p>
-                      </div>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "rounded-full",
-                        topic.state === "Trending"
-                          ? "border-orange-200 bg-orange-50 text-orange-600"
-                          : "border-amber-200 bg-amber-50 text-amber-700"
-                      )}
+                {trendingTopics.isLoading ? (
+                  <CardListSkeleton rows={3} />
+                ) : !trendingTopics.data?.topics?.length ? (
+                  <p className="py-4 text-center text-sm text-muted-foreground">
+                    No trending topics yet
+                  </p>
+                ) : (
+                  trendingTopics.data.topics.map((topic, index) => (
+                    <div
+                      key={topic.id}
+                      className="flex items-start justify-between gap-4 border-t border-border/60 py-3 first:border-t-0 first:pt-0"
                     >
-                      {topic.state}
-                    </Badge>
-                  </div>
-                ))}
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 flex size-6 items-center justify-center rounded-full bg-emerald-50 text-[0.625rem] font-semibold text-emerald-700">
+                          {index + 1}
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold">{topic.title}</p>
+                          <p className="text-xs text-muted-foreground">{timeAgo(topic.created_at)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatNumber(topic.views)} views &middot; {topic.reply_count} replies
+                          </p>
+                        </div>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "rounded-full",
+                          topic.trend === "trending"
+                            ? "border-orange-200 bg-orange-50 text-orange-600"
+                            : "border-amber-200 bg-amber-50 text-amber-700"
+                        )}
+                      >
+                        {topic.trend === "trending" ? "Trending" : "Rising"}
+                      </Badge>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
 
@@ -633,61 +694,96 @@ export function CommunityForumClient() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {experts.map((expert, index) => (
-                  <div
-                    key={expert.name}
-                    className="flex items-start justify-between gap-4 border-t border-border/60 py-3 first:border-t-0 first:pt-0"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={cn(
-                          "mt-0.5 flex size-6 items-center justify-center rounded-full text-[0.625rem] font-semibold",
-                          index === 2
-                            ? "bg-violet-100 text-violet-700"
-                            : "bg-emerald-50 text-emerald-700"
-                        )}
-                      >
-                        {expert.name.charAt(0)}
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold">{expert.name}</p>
-                          {!expert.pending ? (
-                            <span className="text-xs text-amber-500">★★★★★</span>
-                          ) : null}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {expert.specialty}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{expert.rating}</p>
-                      </div>
-                    </div>
-                    {expert.pending ? (
-                      <div className="flex gap-2">
-                        <Button className="h-6 rounded-full bg-[#1b4332] px-2.5 text-[0.625rem] text-white hover:bg-[#244d39]">
-                          Verify
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="h-6 rounded-full border-red-200 bg-red-50 px-2.5 text-[0.625rem] text-red-600"
+                {expertsQuery.isLoading ? (
+                  <CardListSkeleton rows={3} />
+                ) : !expertsQuery.data?.experts?.length ? (
+                  <p className="py-4 text-center text-sm text-muted-foreground">
+                    No experts found
+                  </p>
+                ) : (
+                  expertsQuery.data.experts.map((expert, index) => (
+                    <div
+                      key={expert.id}
+                      className="flex items-start justify-between gap-4 border-t border-border/60 py-3 first:border-t-0 first:pt-0"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={cn(
+                            "mt-0.5 flex size-6 items-center justify-center rounded-full text-[0.625rem] font-semibold",
+                            index === 2
+                              ? "bg-violet-100 text-violet-700"
+                              : "bg-emerald-50 text-emerald-700"
+                          )}
                         >
-                          Deny
-                        </Button>
+                          {expert.name.charAt(0)}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold">{expert.name}</p>
+                            {expert.status !== "pending" ? (
+                              <span className="text-xs text-amber-500">★★★★★</span>
+                            ) : null}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {expert.specialty}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {expert.status === "pending"
+                              ? "Pending review"
+                              : expert.rating != null
+                                ? String(expert.rating)
+                                : "—"}
+                          </p>
+                        </div>
                       </div>
-                    ) : (
-                      <Badge
-                        variant="outline"
-                        className="rounded-full border-emerald-200 bg-emerald-50 text-emerald-700"
-                      >
-                        Verified
-                      </Badge>
-                    )}
-                  </div>
-                ))}
+                      {expert.status === "pending" ? (
+                        <div className="flex gap-2">
+                          <Button
+                            className="h-6 rounded-full bg-[#1b4332] px-2.5 text-[0.625rem] text-white hover:bg-[#244d39]"
+                            onClick={() =>
+                              updateExpert.mutate(
+                                { id: expert.id, data: { status: "verified" } },
+                                {
+                                  onSuccess: () => toast.success(`${expert.name} verified`),
+                                  onError: () => toast.error("Failed to verify expert"),
+                                }
+                              )
+                            }
+                          >
+                            Verify
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="h-6 rounded-full border-red-200 bg-red-50 px-2.5 text-[0.625rem] text-red-600"
+                            onClick={() =>
+                              updateExpert.mutate(
+                                { id: expert.id, data: { status: "denied" } },
+                                {
+                                  onSuccess: () => toast.success(`${expert.name} denied`),
+                                  onError: () => toast.error("Failed to deny expert"),
+                                }
+                              )
+                            }
+                          >
+                            Deny
+                          </Button>
+                        </div>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="rounded-full border-emerald-200 bg-emerald-50 text-emerald-700"
+                        >
+                          Verified
+                        </Badge>
+                      )}
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
           </div>
 
+          {/* ── Content Library ── */}
           <div className="space-y-3">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="space-y-1">
@@ -699,19 +795,57 @@ export function CommunityForumClient() {
                   Articles, videos and guides published to farmers
                 </p>
               </div>
-              <Button className="rounded-full bg-[#1b4332] px-3 text-white hover:bg-[#244d39]">
+              <Button
+                className="rounded-full bg-[#1b4332] px-3 text-white hover:bg-[#244d39]"
+                onClick={() => toast.info("Navigate to new content form")}
+              >
                 + New Content
               </Button>
             </div>
 
-            <div className="grid gap-3 xl:grid-cols-5">
-              <KpiCard title="Total Articles" value="24" icon={MessageCircle} variant="default" />
-              <KpiCard title="Videos" value="8" icon={Video} variant="default" />
-              <KpiCard title="Drafts" value="3" icon={Clock3} variant="amber" />
-              <KpiCard title="Total Views" value="45.2K" icon={Users} variant="green" />
-              <KpiCard title="Avg Read Rate" value="74%" icon={Check} variant="teal" />
-            </div>
+            {/* ── Content KPIs ── */}
+            {contentStats.isLoading ? (
+              <div className="grid gap-3 xl:grid-cols-5">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <KpiSkeleton key={i} />
+                ))}
+              </div>
+            ) : (
+              <div className="grid gap-3 xl:grid-cols-5">
+                <KpiCard
+                  title="Total Articles"
+                  value={String(contentStats.data?.total_articles ?? 0)}
+                  icon={MessageCircle}
+                  variant="default"
+                />
+                <KpiCard
+                  title="Videos"
+                  value={String(contentStats.data?.total_videos ?? 0)}
+                  icon={Video}
+                  variant="default"
+                />
+                <KpiCard
+                  title="Drafts"
+                  value={String(contentStats.data?.total_drafts ?? 0)}
+                  icon={Clock3}
+                  variant="amber"
+                />
+                <KpiCard
+                  title="Total Views"
+                  value={formatNumber(contentStats.data?.total_views ?? 0)}
+                  icon={Users}
+                  variant="green"
+                />
+                <KpiCard
+                  title="Avg Read Rate"
+                  value={contentStats.data?.avg_read_rate != null ? `${contentStats.data.avg_read_rate}%` : "—"}
+                  icon={Check}
+                  variant="teal"
+                />
+              </div>
+            )}
 
+            {/* ── All Content table ── */}
             <Card className="rounded-2xl border border-border/80 py-0">
               <CardHeader>
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -738,59 +872,89 @@ export function CommunityForumClient() {
                 </div>
               </CardHeader>
               <CardContent>
-                <LocalTable
-                  data={discussionContentTableRows}
-                  columns={discussionContentColumns}
-                  searchParams={discussionContentSearchParams}
-                  fallbackSortColumn="published"
-                  searchPlaceholder="Search content..."
-                  emptyTitle="No content found"
-                  emptyDescription="Published articles, videos, and drafts will appear here."
-                  showToolbar={false}
-                  footerNote="Showing 6 of 32 items"
-                />
+                {contentList.isLoading ? (
+                  <div className="space-y-3">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <Skeleton key={i} className="h-10 w-full" />
+                    ))}
+                  </div>
+                ) : (
+                  <LocalTable
+                    data={discussionContentTableRows}
+                    columns={discussionContentColumns}
+                    searchParams={discussionContentSearchParams}
+                    fallbackSortColumn="published"
+                    searchPlaceholder="Search content..."
+                    emptyTitle="No content found"
+                    emptyDescription="Published articles, videos, and drafts will appear here."
+                    showToolbar={false}
+                    footerNote={`Showing ${discussionContentTableRows.length} of ${contentList.data?.total ?? 0} items`}
+                  />
+                )}
               </CardContent>
             </Card>
 
+            {/* ── Categories + Performance ── */}
             <div className="grid gap-4 xl:grid-cols-2">
               <Card className="rounded-2xl border border-border/80 py-0">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Content Categories</CardTitle>
-                    <Button variant="outline" className="h-8 rounded-full px-3">
+                    <Button
+                      variant="outline"
+                      className="h-8 rounded-full px-3"
+                      onClick={() => toast.info("Navigate to add category form")}
+                    >
                       + Add Category
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="px-0">
-                  <Table>
-                    <TableHeader className="bg-[#f1f5ef]">
-                      <TableRow className="hover:bg-[#f1f5ef]">
-                        <TableHead className="px-4">Category</TableHead>
-                        <TableHead>Articles</TableHead>
-                        <TableHead>Videos</TableHead>
-                        <TableHead>Total Views</TableHead>
-                        <TableHead className="px-4">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {contentCategories.map((row) => (
-                        <TableRow key={row.category}>
-                          <TableCell className="px-4 font-medium">
-                            {row.category}
-                          </TableCell>
-                          <TableCell>{row.articles}</TableCell>
-                          <TableCell>{row.videos}</TableCell>
-                          <TableCell>{row.views}</TableCell>
-                          <TableCell className="px-4">
-                            <Button variant="outline" size="sm" className="rounded-full">
-                              Edit
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                  {contentCategories.isLoading ? (
+                    <div className="space-y-3 px-4">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <Skeleton key={i} className="h-8 w-full" />
                       ))}
-                    </TableBody>
-                  </Table>
+                    </div>
+                  ) : !contentCategories.data?.categories?.length ? (
+                    <p className="px-4 py-4 text-center text-sm text-muted-foreground">
+                      No categories yet
+                    </p>
+                  ) : (
+                    <Table>
+                      <TableHeader className="bg-[#f1f5ef]">
+                        <TableRow className="hover:bg-[#f1f5ef]">
+                          <TableHead className="px-4">Category</TableHead>
+                          <TableHead>Articles</TableHead>
+                          <TableHead>Videos</TableHead>
+                          <TableHead>Total Views</TableHead>
+                          <TableHead className="px-4">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {contentCategories.data.categories.map((row) => (
+                          <TableRow key={row.id}>
+                            <TableCell className="px-4 font-medium">
+                              {row.name}
+                            </TableCell>
+                            <TableCell>{row.article_count}</TableCell>
+                            <TableCell>{row.video_count}</TableCell>
+                            <TableCell>{formatNumber(row.total_views)}</TableCell>
+                            <TableCell className="px-4">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="rounded-full"
+                                onClick={() => toast.info(`Edit category: ${row.name}`)}
+                              >
+                                Edit
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
                 </CardContent>
               </Card>
 
@@ -799,44 +963,59 @@ export function CommunityForumClient() {
                   <CardTitle>Content Performance</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    {contentPerformance.map((item) => (
-                      <div
-                        key={item.label}
-                        className="flex items-center justify-between border-b border-border/60 pb-2 text-sm last:border-b-0 last:pb-0"
-                      >
-                        <span className="text-muted-foreground">{item.label}</span>
-                        <span
-                          className={cn(
-                            "font-medium",
-                            item.label.includes("Needs") || item.label.includes("Awaiting")
-                              ? "text-amber-600"
-                              : ""
-                          )}
-                        >
-                          {item.value}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="space-y-3">
-                    <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                      Views By Category
-                    </p>
-                    {categoryViewBars.map((bar) => (
-                      <div key={bar.label} className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">{bar.label}</span>
-                          <span className="text-muted-foreground">{bar.value}</span>
-                        </div>
-                        <div className="h-1.5 rounded-full bg-muted">
+                  {contentPerf.isLoading ? (
+                    <div className="space-y-3">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} className="h-6 w-full" />
+                      ))}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-3">
+                        {perfRows.map((item) => (
                           <div
-                            className={cn("h-1.5 rounded-full", bar.width, bar.color)}
-                          />
-                        </div>
+                            key={item.label}
+                            className="flex items-center justify-between border-b border-border/60 pb-2 text-sm last:border-b-0 last:pb-0"
+                          >
+                            <span className="text-muted-foreground">{item.label}</span>
+                            <span
+                              className={cn(
+                                "font-medium",
+                                item.label.includes("Needs") || item.label.includes("Awaiting")
+                                  ? "text-amber-600"
+                                  : ""
+                              )}
+                            >
+                              {item.value}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                      <div className="space-y-3">
+                        <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                          Views By Category
+                        </p>
+                        {categoryViewBars.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No category data yet</p>
+                        ) : (
+                          categoryViewBars.map((bar) => (
+                            <div key={bar.label} className="space-y-1.5">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">{bar.label}</span>
+                                <span className="text-muted-foreground">{bar.value}</span>
+                              </div>
+                              <div className="h-1.5 rounded-full bg-muted">
+                                <div
+                                  className={cn("h-1.5 rounded-full", bar.color)}
+                                  style={{ width: `${bar.widthPercent}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -844,37 +1023,47 @@ export function CommunityForumClient() {
         </TabsContent>
 
         <TabsContent value="moderation" className="space-y-6 pt-4">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <KpiCard
-              title="Pending Review"
-              value="24"
-              subtitle="Queue requiring moderator action"
-              icon={Flag}
-              variant="red"
-            />
-            <KpiCard
-              title="Actioned Today"
-              value="8"
-              subtitle="Posts reviewed since morning"
-              icon={Gavel}
-              variant="amber"
-            />
-            <KpiCard
-              title="Approved This Week"
-              value="16"
-              subtitle="False positives or resolved safely"
-              icon={Check}
-              variant="green"
-            />
-            <KpiCard
-              title="Users Warned"
-              value="4"
-              subtitle="Escalations issued"
-              icon={Shield}
-              variant="default"
-            />
-          </div>
+          {/* ── Moderation KPIs ── */}
+          {moderationStats.isLoading ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <KpiSkeleton key={i} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <KpiCard
+                title="Pending Review"
+                value={String(moderationStats.data?.pending_review ?? 0)}
+                subtitle="Queue requiring moderator action"
+                icon={Flag}
+                variant="red"
+              />
+              <KpiCard
+                title="Actioned Today"
+                value={String(moderationStats.data?.actioned_today ?? 0)}
+                subtitle="Posts reviewed since morning"
+                icon={Gavel}
+                variant="amber"
+              />
+              <KpiCard
+                title="Approved This Week"
+                value={String(moderationStats.data?.approved_this_week ?? 0)}
+                subtitle="False positives or resolved safely"
+                icon={Check}
+                variant="green"
+              />
+              <KpiCard
+                title="Users Warned"
+                value={String(moderationStats.data?.users_warned ?? 0)}
+                subtitle="Escalations issued"
+                icon={Shield}
+                variant="default"
+              />
+            </div>
+          )}
 
+          {/* ── Moderation Queue ── */}
           <Card className="rounded-3xl border border-border/80 py-0 shadow-sm">
             <CardContent className="p-4">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -884,11 +1073,14 @@ export function CommunityForumClient() {
                       key={chip.label}
                       variant={chip.active ? "default" : "outline"}
                       className={cn(
-                        "h-8 rounded-full px-3 text-xs",
+                        "h-8 cursor-pointer rounded-full px-3 text-xs",
                         chip.active
                           ? "bg-[#1b4332] text-white hover:bg-[#1b4332]"
                           : "border-border bg-white text-muted-foreground"
                       )}
+                      onClick={() =>
+                        setModerationFilter(chip.label === "All" ? undefined : chip.label)
+                      }
                     >
                       {chip.label} ({chip.count})
                     </Badge>
@@ -904,93 +1096,149 @@ export function CommunityForumClient() {
               </div>
 
               <div className="mt-4 space-y-4">
-                {moderationQueue.map((item, index) => (
-                  <Card
-                    key={item.id}
-                    className={cn(
-                      "rounded-3xl border py-0 shadow-[0_8px_24px_rgba(15,23,42,0.06)]",
-                      index === 0 ? "border-red-200" : "border-amber-200"
-                    )}
-                  >
-                    <CardContent className="p-5">
-                      <div className="flex flex-col gap-3 md:flex-row md:items-start">
-                        <div
-                          className={cn(
-                            "flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                            index === 0
-                              ? "bg-red-50 text-red-500"
-                              : "bg-amber-50 text-amber-600"
-                          )}
-                        >
-                          {item.initials}
-                        </div>
-                        <div className="min-w-0 flex-1 space-y-3">
-                          <div className="flex flex-wrap items-center gap-2 text-xs">
-                            <span className="font-semibold text-foreground">
-                              {item.user}
-                            </span>
-                            <Badge
-                              variant="outline"
+                {moderationQueue.isLoading ? (
+                  <div className="space-y-4">
+                    {Array.from({ length: 2 }).map((_, i) => (
+                      <Skeleton key={i} className="h-48 w-full rounded-3xl" />
+                    ))}
+                  </div>
+                ) : !moderationQueue.data?.items?.length ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    No items in moderation queue
+                  </p>
+                ) : (
+                  moderationQueue.data.items.map((item, index) => {
+                    const reasonTone =
+                      item.reason.toLowerCase() === "spam" ? "amber" : "red"
+                    const borderColor =
+                      reasonTone === "red" ? "border-red-200" : "border-amber-200"
+                    const avatarColor =
+                      reasonTone === "red"
+                        ? "bg-red-50 text-red-500"
+                        : "bg-amber-50 text-amber-600"
+                    const quoteColor =
+                      reasonTone === "red"
+                        ? "bg-red-50/80 text-slate-700"
+                        : "bg-amber-50/80 text-slate-700"
+
+                    const actions: {
+                      label: string
+                      tone: "green" | "red" | "slate" | "purple"
+                      icon: typeof Check
+                      actionKey: "keep" | "remove" | "warn_user" | "ban_user" | "pin_correction"
+                    }[] = [
+                      { label: "Keep Post", tone: "green", icon: Check, actionKey: "keep" },
+                      { label: "Remove Post", tone: "red", icon: X, actionKey: "remove" },
+                      { label: "Warn User", tone: "slate", icon: AlertTriangle, actionKey: "warn_user" },
+                      { label: "Ban User", tone: "purple", icon: Gavel, actionKey: "ban_user" },
+                      ...(item.reason.toLowerCase() !== "spam"
+                        ? [{ label: "Pin Correction", tone: "slate" as const, icon: Pin, actionKey: "pin_correction" as const }]
+                        : []),
+                    ]
+
+                    return (
+                      <Card
+                        key={item.report_id}
+                        className={cn(
+                          "rounded-3xl border py-0 shadow-[0_8px_24px_rgba(15,23,42,0.06)]",
+                          borderColor
+                        )}
+                      >
+                        <CardContent className="p-5">
+                          <div className="flex flex-col gap-3 md:flex-row md:items-start">
+                            <div
                               className={cn(
-                                "rounded-full px-2 py-0.5",
-                                moderationBadgeStyles(
-                                  item.reason === "Spam" ? "amber" : "red"
-                                )
+                                "flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+                                avatarColor
                               )}
                             >
-                              {item.reason}
-                            </Badge>
-                            <span className="text-muted-foreground">
-                              {item.reports}
-                            </span>
-                            <span className="text-muted-foreground">{item.time}</span>
-                          </div>
-                          <div
-                            className={cn(
-                              "rounded-2xl px-4 py-3 text-sm",
-                              index === 0
-                                ? "bg-red-50/80 text-slate-700"
-                                : "bg-amber-50/80 text-slate-700"
-                            )}
-                          >
-                            {item.quote}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {item.context}
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {item.actions.map((action) => {
-                              const Icon = action.icon
-
-                              return (
-                                <Button
-                                  key={action.label}
+                              {item.author_initials}
+                            </div>
+                            <div className="min-w-0 flex-1 space-y-3">
+                              <div className="flex flex-wrap items-center gap-2 text-xs">
+                                <span className="font-semibold text-foreground">
+                                  {item.author_name}
+                                </span>
+                                <Badge
                                   variant="outline"
-                                  size="sm"
                                   className={cn(
-                                    "rounded-lg border text-xs shadow-none",
-                                    moderationActionStyles(action.tone)
+                                    "rounded-full px-2 py-0.5",
+                                    moderationBadgeStyles(reasonTone)
                                   )}
                                 >
-                                  <Icon className="size-3" />
-                                  {action.label}
-                                </Button>
-                              )
-                            })}
+                                  {item.reason}
+                                </Badge>
+                                <span className="text-muted-foreground">
+                                  Flagged by {item.report_count} users
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {timeAgo(item.earliest_report_at)}
+                                </span>
+                              </div>
+                              <div
+                                className={cn(
+                                  "rounded-2xl px-4 py-3 text-sm",
+                                  quoteColor
+                                )}
+                              >
+                                &ldquo;{item.body_excerpt}&rdquo;
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {item.context}
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {actions.map((action) => {
+                                  const Icon = action.icon
+
+                                  return (
+                                    <Button
+                                      key={action.label}
+                                      variant="outline"
+                                      size="sm"
+                                      className={cn(
+                                        "rounded-lg border text-xs shadow-none",
+                                        moderationActionStyles(action.tone)
+                                      )}
+                                      onClick={() =>
+                                        moderationAction.mutate(
+                                          {
+                                            target_type: item.target_type,
+                                            target_id: item.target_id,
+                                            action: action.actionKey,
+                                          },
+                                          {
+                                            onSuccess: () =>
+                                              toast.success(`${action.label} action completed`),
+                                            onError: () =>
+                                              toast.error(`Failed to ${action.label.toLowerCase()}`),
+                                          }
+                                        )
+                                      }
+                                    >
+                                      <Icon className="size-3" />
+                                      {action.label}
+                                    </Button>
+                                  )
+                                })}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        </CardContent>
+                      </Card>
+                    )
+                  })
+                )}
               </div>
             </CardContent>
           </Card>
 
+          {/* ── Load more ── */}
           <Card className="rounded-2xl border border-sky-100 py-0 shadow-sm">
             <CardContent className="flex items-center justify-between px-4 py-4">
               <p className="text-sm text-muted-foreground">
-                + 22 more flagged items sorted by report count
+                {moderationQueue.data
+                  ? `+ ${Math.max(0, (moderationQueue.data.total ?? 0) - (moderationQueue.data.items?.length ?? 0))} more flagged items sorted by report count`
+                  : "Loading..."}
               </p>
               <Button variant="outline" className="rounded-xl px-4">
                 Load More
@@ -998,6 +1246,7 @@ export function CommunityForumClient() {
             </CardContent>
           </Card>
 
+          {/* ── Flagged Articles table ── */}
           <Card className="rounded-3xl border border-border/80 py-0 shadow-sm">
             <CardHeader className="border-b border-border/60 py-5">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -1013,21 +1262,29 @@ export function CommunityForumClient() {
                   variant="outline"
                   className="rounded-full border-amber-200 bg-amber-50 px-3 py-1 text-amber-700"
                 >
-                  6 items need review
+                  {flaggedContent.data?.total ?? 0} items need review
                 </Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <LocalTable
-                data={moderationContentTableRows}
-                columns={moderationContentColumns}
-                searchParams={moderationContentSearchParams}
-                fallbackSortColumn="reports"
-                searchPlaceholder="Search flagged content..."
-                emptyTitle="No flagged content"
-                emptyDescription="Reviewed or auto-flagged content items will appear here."
-                showToolbar={false}
-              />
+              {flaggedContent.isLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <LocalTable
+                  data={moderationContentTableRows}
+                  columns={moderationContentColumns}
+                  searchParams={moderationContentSearchParams}
+                  fallbackSortColumn="reports"
+                  searchPlaceholder="Search flagged content..."
+                  emptyTitle="No flagged content"
+                  emptyDescription="Reviewed or auto-flagged content items will appear here."
+                  showToolbar={false}
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>

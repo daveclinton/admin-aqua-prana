@@ -8,6 +8,7 @@ import {
   inviteMember,
   updateMember,
   removeMember,
+  resendInvite,
   getRolesConfig,
   updateRoleConfig,
 } from "@/features/team/api/team-api"
@@ -62,6 +63,16 @@ export function useRemoveMember() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: removeMember,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["team"] })
+    },
+  })
+}
+
+export function useResendInvite() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: resendInvite,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["team"] })
     },

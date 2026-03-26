@@ -63,6 +63,16 @@ export async function removeMember(
   return res.data
 }
 
+export async function resendInvite(
+  memberId: string
+): Promise<{ resent: boolean; email: string }> {
+  const res = await api<ApiSuccessResponse<{ resent: boolean; email: string }>>(
+    `/v1/admin/team/${memberId}/resend`,
+    { method: "POST" }
+  )
+  return res.data
+}
+
 export async function getRolesConfig(): Promise<RolesConfigDTO> {
   const res = await api<ApiSuccessResponse<RolesConfigDTO>>(
     "/v1/admin/team/roles"
