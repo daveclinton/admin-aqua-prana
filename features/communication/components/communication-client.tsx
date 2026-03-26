@@ -22,12 +22,14 @@ import {
   Zap,
 } from "lucide-react"
 import { parseAsStringLiteral, useQueryState, useQueryStates } from "nuqs"
+import { toast } from "sonner"
 import { DataTable } from "@/components/table/data-table"
 import { DataTableToolbar } from "@/components/table/data-table-toolbar"
 import { KpiCard } from "@/components/dashboard/kpi-card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -38,6 +40,25 @@ import {
   parseSortingState,
 } from "@/lib/table/table-search-params"
 import { getSortingValue, resolveUpdater } from "@/lib/table/table-utils"
+import {
+  useCommStats,
+  useBroadcastHistory,
+  useSmsCampaigns,
+  useSuppressionList,
+  useSendBroadcast,
+  useCreateSmsCampaign,
+  useUpdateSmsCampaign,
+  useRemoveSuppression,
+} from "@/features/communication/hooks/use-communication"
+import type {
+  BroadcastDTO,
+  SmsCampaignDTO,
+  SuppressionDTO,
+} from "@/features/communication/types"
+
+/* ------------------------------------------------------------------ */
+/*  Local row types for tables                                         */
+/* ------------------------------------------------------------------ */
 
 type BroadcastRow = {
   id: string
@@ -54,16 +75,7 @@ type BroadcastRow = {
   by: string
 }
 
-type SuppressionRow = {
-  id: string
-  farmer: string
-  channel: "Push" | "SMS" | "Email"
-  date: string
-  reason: string
-  action: string
-}
-
-type CampaignRow = {
+type SmsCampaignRow = {
   id: string
   campaign: string
   audience: string
@@ -71,6 +83,15 @@ type CampaignRow = {
   status: "Draft" | "Scheduled" | "Sent"
   recipients: number
   engagement: string
+}
+
+type SuppressionRow = {
+  id: string
+  farmer: string
+  channel: "Push" | "SMS" | "Email"
+  date: string
+  reason: string
+  action: string
 }
 
 type AnalyticsAudienceRow = {
@@ -97,96 +118,9 @@ type MessageTypePerformanceRow = {
   tone: "red" | "blue" | "amber" | "green"
 }
 
-const broadcastHistory: BroadcastRow[] = [
-  {
-    id: "b1",
-    title: "White spot disease alert — North region",
-    subtitle: "Urgent disease advisory for shrimp farmers",
-    channel: "Push + SMS",
-    audience: "Chennai",
-    sent: 38,
-    delivered: 37,
-    opened: 34,
-    openRate: "91%",
-    optOuts: 0,
-    sentAt: "Feb 18, 09:00",
-    by: "Admin",
-  },
-  {
-    id: "b2",
-    title: "February feed discount — Pro users",
-    subtitle: "15% off premium feed this week",
-    channel: "Push",
-    audience: "Pro Plan",
-    sent: 98,
-    delivered: 96,
-    opened: 62,
-    openRate: "64%",
-    optOuts: 2,
-    sentAt: "Feb 15, 11:30",
-    by: "Admin",
-  },
-  {
-    id: "b3",
-    title: "System maintenance — All users",
-    subtitle: "Scheduled downtime Tue 2–4 AM IST",
-    channel: "Email",
-    audience: "All Users",
-    sent: 200,
-    delivered: 198,
-    opened: 144,
-    openRate: "72%",
-    optOuts: 1,
-    sentAt: "Feb 12, 08:00",
-    by: "Admin",
-  },
-  {
-    id: "b4",
-    title: "New AquaGPT features update",
-    subtitle: "Multi-language support + faster responses",
-    channel: "Push",
-    audience: "All Users",
-    sent: 200,
-    delivered: 199,
-    opened: 168,
-    openRate: "84%",
-    optOuts: 0,
-    sentAt: "Feb 1, 10:00",
-    by: "Admin",
-  },
-  {
-    id: "b5",
-    title: "Low DO alert — Mumbai region",
-    subtitle: "Critical DO below 3 mg/L in 6 ponds",
-    channel: "SMS",
-    audience: "Mumbai",
-    sent: 62,
-    delivered: 61,
-    opened: 58,
-    openRate: "93%",
-    optOuts: 0,
-    sentAt: "Jan 28, 06:45",
-    by: "Auto",
-  },
-]
-
-const suppressionList: SuppressionRow[] = [
-  { id: "s1", farmer: "bce Farmer", channel: "SMS", date: "Feb 15", reason: "Too frequent", action: "Re-subscribe" },
-  { id: "s2", farmer: "Sample Farmer 2", channel: "Push", date: "Feb 10", reason: "Not relevant", action: "Re-subscribe" },
-  { id: "s3", farmer: "Ravi Pond", channel: "Email", date: "Jan 22", reason: "Unsubscribed", action: "Re-subscribe" },
-]
-
-const pushCampaigns: CampaignRow[] = [
-  { id: "p1", campaign: "Disease Alert: East Coast", audience: "At-risk ponds", scheduledFor: "Today, 08:30", status: "Sent", recipients: 124, engagement: "88%" },
-  { id: "p2", campaign: "Feed Reminder", audience: "Standard plan", scheduledFor: "Tomorrow, 06:00", status: "Scheduled", recipients: 280, engagement: "—" },
-  { id: "p3", campaign: "AquaGPT Weekly Tips", audience: "All farmers", scheduledFor: "Draft", status: "Draft", recipients: 0, engagement: "—" },
-]
-
-const smsCampaigns: CampaignRow[] = [
-  { id: "m1", campaign: "Emergency Oxygen Alert", audience: "North cluster", scheduledFor: "Today, 05:45", status: "Sent", recipients: 64, engagement: "93%" },
-  { id: "m2", campaign: "Payment Reminder", audience: "Outstanding invoices", scheduledFor: "Tomorrow, 09:00", status: "Scheduled", recipients: 41, engagement: "—" },
-  { id: "m3", campaign: "Harvest Window Update", audience: "Harvest-ready farms", scheduledFor: "Draft", status: "Draft", recipients: 0, engagement: "—" },
-]
+/* ------------------------------------------------------------------ */
+/*  Static analytics data (no backend endpoint yet)                    */
+/* ------------------------------------------------------------------ */
 
 const audiencePerformance: AnalyticsAudienceRow[] = [
   { id: "a1", audience: "Pro Plan Farmers", rate: 84.2, tone: "green" },
@@ -210,14 +144,12 @@ const messageTypePerformance: MessageTypePerformanceRow[] = [
   { id: "mt4", type: "Promotions", sends: 6, pushOpen: "62%", emailOpen: "58%", optOuts: 3, tone: "amber" },
 ]
 
+/* ------------------------------------------------------------------ */
+/*  Search‑param presets                                               */
+/* ------------------------------------------------------------------ */
+
 const tabOptions = ["push", "sms", "analytics", "sent-log"] as const
 type CommunicationTab = typeof tabOptions[number]
-
-const pushSearchParams = createTableSearchParams({
-  defaultPageSize: 5,
-  defaultSort: "scheduledFor.desc",
-  urlKeys: { globalFilter: "pushQ", pageIndex: "pushPage", pageSize: "pushSize", sort: "pushSort" },
-})
 
 const smsSearchParams = createTableSearchParams({
   defaultPageSize: 5,
@@ -237,20 +169,195 @@ const suppressionSearchParams = createTableSearchParams({
   urlKeys: { globalFilter: "supQ", pageIndex: "supPage", pageSize: "supSize", sort: "supSort" },
 })
 
+/* ------------------------------------------------------------------ */
+/*  Helpers: map DTOs → table rows                                     */
+/* ------------------------------------------------------------------ */
+
+function mapBroadcastToRow(b: BroadcastDTO): BroadcastRow {
+  const openRate = b.recipient_count > 0 ? Math.round((b.read_count / b.recipient_count) * 100) : 0
+  return {
+    id: b.batch_id,
+    title: b.title,
+    subtitle: b.body.length > 60 ? `${b.body.slice(0, 60)}...` : b.body,
+    channel: "Push",
+    audience: b.category || "All Users",
+    sent: b.recipient_count,
+    delivered: b.recipient_count,
+    opened: b.read_count,
+    openRate: `${openRate}%`,
+    optOuts: 0,
+    sentAt: new Date(b.sent_at).toLocaleDateString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+    by: "Admin",
+  }
+}
+
+function mapSmsCampaignToRow(c: SmsCampaignDTO): SmsCampaignRow {
+  const deliveryRate = c.recipients > 0 && c.delivered > 0 ? `${Math.round((c.delivered / c.recipients) * 100)}%` : "—"
+  const statusMap: Record<string, SmsCampaignRow["status"]> = { draft: "Draft", scheduled: "Scheduled", sent: "Sent" }
+  return {
+    id: c.id,
+    campaign: c.title,
+    audience: c.audience || "All Farmers",
+    scheduledFor: c.scheduled_for
+      ? new Date(c.scheduled_for).toLocaleDateString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+      : c.status === "draft" ? "Draft" : "—",
+    status: statusMap[c.status.toLowerCase()] ?? "Draft",
+    recipients: c.recipients,
+    engagement: deliveryRate,
+  }
+}
+
+function mapSuppressionToRow(s: SuppressionDTO): SuppressionRow {
+  const channelMap: Record<string, SuppressionRow["channel"]> = { push: "Push", sms: "SMS", email: "Email" }
+  return {
+    id: s.id,
+    farmer: s.farmer_name ?? s.farmer_email,
+    channel: channelMap[s.channel.toLowerCase()] ?? "Push",
+    date: new Date(s.created_at).toLocaleDateString("en-IN", { month: "short", day: "numeric" }),
+    reason: s.reason,
+    action: "Re-subscribe",
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Skeleton helpers                                                   */
+/* ------------------------------------------------------------------ */
+
+function KpiSkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="rounded-2xl border p-4 space-y-3">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-8 w-16" />
+          <Skeleton className="h-3 w-32" />
+        </div>
+      ))}
+    </>
+  )
+}
+
+function TableSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: rows }).map((_, i) => (
+        <Skeleton key={i} className="h-12 w-full rounded-xl" />
+      ))}
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main component                                                     */
+/* ------------------------------------------------------------------ */
+
 export function CommunicationClient() {
   const [tab, setTab] = useQueryState(
     "tab",
     parseAsStringLiteral(tabOptions).withDefault("push")
   )
-  const [pushTitle, setPushTitle] = useState("White spot alert — North region")
-  const [pushBody, setPushBody] = useState("Check your shrimp ponds for early white spot symptoms. Tap to learn more.")
+
+  /* ---- form state: push ---- */
+  const [pushTitle, setPushTitle] = useState("")
+  const [pushBody, setPushBody] = useState("")
   const [selectedAudience, setSelectedAudience] = useState("All Users")
-  const [smsCampaignName, setSmsCampaignName] = useState("February Feed Promo")
-  const [smsMessage, setSmsMessage] = useState("Hi Farmer, your pond DO level needs attention. Log in to Aquaprana for guidance. Reply STOP to opt out.")
+  const [pushCategory, setPushCategory] = useState("")
+  const [pushSeverity, setPushSeverity] = useState("")
+
+  /* ---- form state: sms ---- */
+  const [smsCampaignName, setSmsCampaignName] = useState("")
+  const [smsMessage, setSmsMessage] = useState("")
   const [selectedSmsAudience, setSelectedSmsAudience] = useState("All Farmers")
+
+  /* ---- search state: sent log ---- */
+  const [sentLogSearch, setSentLogSearch] = useState("")
+
+  /* ---- static option lists ---- */
   const audienceOptions = ["All Users", "Free Tier", "Pro Plan", "Enterprise", "Mumbai", "Chennai", "Kolkata", "Has Critical Alerts"]
   const smsAudienceOptions = ["All Farmers", "Shrimp Farmers", "Pro Plan", "Overdue Billing", "Critical Alerts", "New this month"]
-  const recentPushSends = broadcastHistory.filter((item) => item.channel === "Push" || item.channel === "Push + SMS").slice(0, 3)
+
+  /* ---- API hooks ---- */
+  const stats = useCommStats()
+  const broadcastHistory = useBroadcastHistory({ search: sentLogSearch || undefined, limit: 20 })
+  const smsCampaignsQuery = useSmsCampaigns({ limit: 20 })
+  const suppressions = useSuppressionList({ channel: "push" })
+
+  const sendBroadcast = useSendBroadcast()
+  const createSmsCampaign = useCreateSmsCampaign()
+  const updateSmsCampaign = useUpdateSmsCampaign()
+  const removeSuppression = useRemoveSuppression()
+
+  /* ---- derived data ---- */
+  const broadcastRows: BroadcastRow[] = useMemo(
+    () => (broadcastHistory.data?.broadcasts ?? []).map(mapBroadcastToRow),
+    [broadcastHistory.data],
+  )
+
+  const smsCampaignRows: SmsCampaignRow[] = useMemo(
+    () => (smsCampaignsQuery.data?.campaigns ?? []).map(mapSmsCampaignToRow),
+    [smsCampaignsQuery.data],
+  )
+
+  const suppressionRows: SuppressionRow[] = useMemo(
+    () => (suppressions.data?.suppressions ?? []).map(mapSuppressionToRow),
+    [suppressions.data],
+  )
+
+  const recentPushSends = broadcastRows.slice(0, 3)
+
+  /* ---- handlers ---- */
+  function handleSendNotification() {
+    sendBroadcast.mutate(
+      {
+        title: pushTitle,
+        body: pushBody,
+        category: pushCategory || undefined,
+        severity: pushSeverity || undefined,
+        target_role: selectedAudience !== "All Users" ? selectedAudience : undefined,
+      },
+      {
+        onSuccess: (data) => {
+          toast.success(`Notification sent to ${data.recipients} recipients`)
+          setPushTitle("")
+          setPushBody("")
+          setPushCategory("")
+          setPushSeverity("")
+        },
+        onError: (err) => {
+          toast.error(err.message || "Failed to send notification")
+        },
+      },
+    )
+  }
+
+  function handleLaunchSmsCampaign() {
+    createSmsCampaign.mutate(
+      {
+        title: smsCampaignName,
+        body: smsMessage,
+        audience: selectedSmsAudience,
+      },
+      {
+        onSuccess: () => {
+          toast.success("SMS campaign created successfully")
+          setSmsCampaignName("")
+          setSmsMessage("")
+        },
+        onError: (err) => {
+          toast.error(err.message || "Failed to create SMS campaign")
+        },
+      },
+    )
+  }
+
+  /* ---- stat values ---- */
+  const avgOpenRate = stats.data ? `${stats.data.avg_open_rate.toFixed(1)}%` : "—"
+  const sentThisMonth = stats.data ? String(stats.data.sent_this_month) : "—"
+  const totalSuppressions = stats.data ? String(stats.data.total_suppressions) : "—"
+  const pushSuppressions = stats.data ? String(stats.data.push_suppressions) : "—"
+  const smsDrafts = stats.data ? String(stats.data.sms_drafts) : "—"
+  const smsCampaignCount = stats.data ? String(stats.data.sms_sent + stats.data.sms_scheduled) : "—"
+  const smsScheduled = stats.data ? String(stats.data.sms_scheduled) : "0"
 
   return (
     <div className="space-y-6">
@@ -286,12 +393,21 @@ export function CommunicationClient() {
           </TabsTrigger>
         </TabsList>
 
+        {/* ================================================================ */}
+        {/*  PUSH TAB                                                        */}
+        {/* ================================================================ */}
         <TabsContent value="push" className="space-y-6 pt-4">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <KpiCard title="Avg Open Rate" value="78.4%" subtitle="↑ +3% vs last month" icon={Bell} variant="green" />
-            <KpiCard title="Sent This Month" value="142" subtitle="Push broadcasts only" icon={Send} variant="default" />
-            <KpiCard title="Opt-Outs" value="8" subtitle="Needs audience review" icon={MessageSquare} variant="amber" />
-            <KpiCard title="Drafts Pending" value="3" subtitle="Ready for approval" icon={Zap} variant="teal" />
+            {stats.isLoading ? (
+              <KpiSkeleton count={4} />
+            ) : (
+              <>
+                <KpiCard title="Avg Open Rate" value={avgOpenRate} subtitle="↑ +3% vs last month" icon={Bell} variant="green" />
+                <KpiCard title="Sent This Month" value={sentThisMonth} subtitle="Push broadcasts only" icon={Send} variant="default" />
+                <KpiCard title="Opt-Outs" value={pushSuppressions} subtitle="Needs audience review" icon={MessageSquare} variant="amber" />
+                <KpiCard title="Drafts Pending" value={smsDrafts} subtitle="Ready for approval" icon={Zap} variant="teal" />
+              </>
+            )}
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[1.05fr_1fr]">
@@ -338,6 +454,24 @@ export function CommunicationClient() {
                   </div>
                   <p className="text-sm text-muted-foreground">Estimated reach: <span className="font-semibold text-foreground">200 users</span></p>
                 </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Category</label>
+                    <Input
+                      value={pushCategory}
+                      onChange={(event) => setPushCategory(event.target.value)}
+                      placeholder="e.g. alert, promo, update"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Severity</label>
+                    <Input
+                      value={pushSeverity}
+                      onChange={(event) => setPushSeverity(event.target.value)}
+                      placeholder="e.g. low, medium, high"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-3">
                   <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Delivery</label>
                   <div className="flex flex-wrap gap-2">
@@ -347,8 +481,8 @@ export function CommunicationClient() {
                   </div>
                 </div>
                 <div className="flex justify-end">
-                  <Button>
-                    Send Notification
+                  <Button onClick={handleSendNotification} disabled={sendBroadcast.isPending || !pushTitle || !pushBody}>
+                    {sendBroadcast.isPending ? "Sending..." : "Send Notification"}
                     <Send className="ml-2 size-4" />
                   </Button>
                 </div>
@@ -387,19 +521,25 @@ export function CommunicationClient() {
                   <Button variant="outline" size="sm">View All</Button>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {recentPushSends.map((item) => (
-                    <div key={item.id} className="flex items-start gap-3 rounded-xl border px-3 py-3">
-                      <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                        <Send className="size-4" />
+                  {broadcastHistory.isLoading ? (
+                    <TableSkeleton rows={3} />
+                  ) : recentPushSends.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No recent sends yet.</p>
+                  ) : (
+                    recentPushSends.map((item) => (
+                      <div key={item.id} className="flex items-start gap-3 rounded-xl border px-3 py-3">
+                        <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                          <Send className="size-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{item.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.sentAt} · {item.sent} users · <span className="font-medium text-emerald-600">{item.openRate} opened</span>
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{item.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {item.sentAt} · {item.sent} users · <span className="font-medium text-emerald-600">{item.openRate} opened</span>
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </CardContent>
               </Card>
 
@@ -418,9 +558,9 @@ export function CommunicationClient() {
                   <div className="flex items-center justify-between rounded-xl border px-3 py-3">
                     <div>
                       <p className="text-sm font-medium">Drafts</p>
-                      <p className="text-xs text-muted-foreground">3 messages need review before publishing</p>
+                      <p className="text-xs text-muted-foreground">{smsDrafts} messages need review before publishing</p>
                     </div>
-                    <Badge variant="outline">3</Badge>
+                    <Badge variant="outline">{smsDrafts}</Badge>
                   </div>
                   <div className="flex items-center justify-between rounded-xl border px-3 py-3">
                     <div>
@@ -436,27 +576,40 @@ export function CommunicationClient() {
 
           <Card className="rounded-2xl">
             <CardHeader>
-              <CardTitle>Push Campaign Queue</CardTitle>
+              <CardTitle>Suppression List</CardTitle>
             </CardHeader>
             <CardContent>
-              <LocalTable
-                data={pushCampaigns}
-                columns={campaignColumns}
-                searchParams={pushSearchParams}
-                fallbackSortColumn="scheduledFor"
-                searchPlaceholder="Search push campaigns"
-                emptyTitle="No push campaigns"
-                emptyDescription="Create or import a push campaign to see it here."
-              />
+              {suppressions.isLoading ? (
+                <TableSkeleton rows={3} />
+              ) : (
+                <SuppressionTable
+                  data={suppressionRows}
+                  onRemove={(id) => {
+                    removeSuppression.mutate(id, {
+                      onSuccess: () => toast.success("Suppression removed"),
+                      onError: (err) => toast.error(err.message || "Failed to remove suppression"),
+                    })
+                  }}
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* ================================================================ */}
+        {/*  SMS TAB                                                         */}
+        {/* ================================================================ */}
         <TabsContent value="sms" className="space-y-6 pt-4">
           <div className="grid gap-4 md:grid-cols-3">
-            <KpiCard title="SMS Campaigns" value="8" subtitle="2 queued right now" icon={Smartphone} variant="green" />
-            <KpiCard title="Delivery Rate" value="94%" subtitle="Across recent sends" icon={CheckCircle2} variant="teal" />
-            <KpiCard title="Opt-Out Pressure" value="Low" subtitle="3 flagged audiences" icon={MessageSquare} variant="amber" />
+            {stats.isLoading ? (
+              <KpiSkeleton count={3} />
+            ) : (
+              <>
+                <KpiCard title="SMS Campaigns" value={smsCampaignCount} subtitle={`${smsScheduled} queued right now`} icon={Smartphone} variant="green" />
+                <KpiCard title="Delivery Rate" value="94%" subtitle="Across recent sends" icon={CheckCircle2} variant="teal" />
+                <KpiCard title="Opt-Out Pressure" value="Low" subtitle={`${stats.data?.sms_suppressions ?? 0} flagged audiences`} icon={MessageSquare} variant="amber" />
+              </>
+            )}
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
@@ -523,8 +676,8 @@ export function CommunicationClient() {
                     <Button variant="outline">Save Draft</Button>
                     <Button variant="outline">Send Test SMS</Button>
                   </div>
-                  <Button>
-                    Launch Campaign
+                  <Button onClick={handleLaunchSmsCampaign} disabled={createSmsCampaign.isPending || !smsCampaignName || !smsMessage}>
+                    {createSmsCampaign.isPending ? "Creating..." : "Launch Campaign"}
                     <Send className="ml-2 size-4" />
                   </Button>
                 </div>
@@ -556,7 +709,7 @@ export function CommunicationClient() {
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between border-b pb-3">
                     <p className="text-sm text-muted-foreground">Total opt-outs</p>
-                    <p className="text-2xl font-semibold">14</p>
+                    <p className="text-2xl font-semibold">{stats.data?.sms_suppressions ?? "—"}</p>
                   </div>
                   <div className="flex items-center justify-between border-b pb-3">
                     <p className="text-sm text-muted-foreground">Opt-out rate</p>
@@ -577,26 +730,39 @@ export function CommunicationClient() {
               <CardTitle>SMS Broadcast Queue</CardTitle>
             </CardHeader>
             <CardContent>
-              <LocalTable
-                data={smsCampaigns}
-                columns={campaignColumns}
-                searchParams={smsSearchParams}
-                fallbackSortColumn="scheduledFor"
-                searchPlaceholder="Search SMS campaigns"
-                emptyTitle="No SMS campaigns"
-                emptyDescription="Create an SMS broadcast to see it here."
-              />
+              {smsCampaignsQuery.isLoading ? (
+                <TableSkeleton rows={3} />
+              ) : (
+                <LocalTable
+                  data={smsCampaignRows}
+                  columns={smsCampaignColumns}
+                  searchParams={smsSearchParams}
+                  fallbackSortColumn="scheduledFor"
+                  searchPlaceholder="Search SMS campaigns"
+                  emptyTitle="No SMS campaigns"
+                  emptyDescription="Create an SMS broadcast to see it here."
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* ================================================================ */}
+        {/*  ANALYTICS TAB                                                   */}
+        {/* ================================================================ */}
         <TabsContent value="analytics" className="space-y-6 pt-4">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            <KpiCard title="Push Open Rate" value="78.4%" subtitle="↑ +3% vs last mo" icon={Bell} variant="green" />
-            <KpiCard title="Email Open Rate" value="72%" subtitle="Steady across campaigns" icon={Mail} variant="teal" />
-            <KpiCard title="SMS Delivery" value="99.1%" subtitle="Strong system-wide delivery" icon={Smartphone} variant="amber" />
-            <KpiCard title="Opt-Out Rate" value="0.6%" subtitle="Well within healthy range" icon={MessageSquare} variant="default" />
-            <KpiCard title="Messages Sent / Mo" value="142" subtitle="All campaign channels" icon={Send} variant="green" />
+            {stats.isLoading ? (
+              <KpiSkeleton count={5} />
+            ) : (
+              <>
+                <KpiCard title="Push Open Rate" value={avgOpenRate} subtitle="↑ +3% vs last mo" icon={Bell} variant="green" />
+                <KpiCard title="Email Open Rate" value="72%" subtitle="Steady across campaigns" icon={Mail} variant="teal" />
+                <KpiCard title="SMS Delivery" value="99.1%" subtitle="Strong system-wide delivery" icon={Smartphone} variant="amber" />
+                <KpiCard title="Opt-Out Rate" value="0.6%" subtitle="Well within healthy range" icon={MessageSquare} variant="default" />
+                <KpiCard title="Messages Sent / Mo" value={sentThisMonth} subtitle="All campaign channels" icon={Send} variant="green" />
+              </>
+            )}
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[1fr_0.95fr]">
@@ -612,7 +778,7 @@ export function CommunicationClient() {
                 </div>
                 <div className="rounded-2xl bg-[#f3f8f4] p-4">
                   <div className="mb-3 flex flex-wrap items-center justify-end gap-3 text-[11px] text-muted-foreground">
-                    <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-emerald-600" /> Push 78.4%</span>
+                    <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-emerald-600" /> Push {avgOpenRate}</span>
                     <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-teal-500" /> Email 72%</span>
                     <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-amber-500" /> SMS 99%</span>
                   </div>
@@ -733,12 +899,21 @@ export function CommunicationClient() {
           </div>
         </TabsContent>
 
+        {/* ================================================================ */}
+        {/*  SENT LOG TAB                                                    */}
+        {/* ================================================================ */}
         <TabsContent value="sent-log" className="space-y-6 pt-4">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <KpiCard title="Messages Sent" value="142" subtitle="This month" icon={Mail} variant="green" />
-            <KpiCard title="Avg Open Rate" value="78.4%" subtitle="Across all sends" icon={CheckCircle2} variant="teal" />
-            <KpiCard title="Opt-Outs" value="8" subtitle="This month" icon={MessageSquare} variant="amber" />
-            <KpiCard title="Avg Recipients" value="200" subtitle="Per broadcast" icon={Users} variant="default" />
+            {stats.isLoading ? (
+              <KpiSkeleton count={4} />
+            ) : (
+              <>
+                <KpiCard title="Messages Sent" value={sentThisMonth} subtitle="This month" icon={Mail} variant="green" />
+                <KpiCard title="Avg Open Rate" value={avgOpenRate} subtitle="Across all sends" icon={CheckCircle2} variant="teal" />
+                <KpiCard title="Opt-Outs" value={totalSuppressions} subtitle="This month" icon={MessageSquare} variant="amber" />
+                <KpiCard title="Avg Recipients" value="200" subtitle="Per broadcast" icon={Users} variant="default" />
+              </>
+            )}
           </div>
 
           <Card className="rounded-2xl">
@@ -747,7 +922,12 @@ export function CommunicationClient() {
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative w-full min-w-[220px] md:w-[260px]">
                   <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input className="h-9 pl-9" placeholder="Search by title or recipient..." />
+                  <Input
+                    className="h-9 pl-9"
+                    placeholder="Search by title or recipient..."
+                    value={sentLogSearch}
+                    onChange={(e) => setSentLogSearch(e.target.value)}
+                  />
                 </div>
                 <SimpleFilterChip label="All Channels" />
                 <SimpleFilterChip label="All Audiences" />
@@ -755,17 +935,21 @@ export function CommunicationClient() {
               </div>
             </CardHeader>
             <CardContent>
-              <LocalTable
-                data={broadcastHistory}
-                columns={broadcastColumns}
-                searchParams={sentLogSearchParams}
-                fallbackSortColumn="sentAt"
-                searchPlaceholder="Search by title or recipient"
-                emptyTitle="No broadcasts found"
-                emptyDescription="Sent broadcasts will appear here."
-                showToolbar={false}
-                footerNote="Showing 5 of 142 broadcasts"
-              />
+              {broadcastHistory.isLoading ? (
+                <TableSkeleton rows={5} />
+              ) : (
+                <LocalTable
+                  data={broadcastRows}
+                  columns={broadcastColumns}
+                  searchParams={sentLogSearchParams}
+                  fallbackSortColumn="sentAt"
+                  searchPlaceholder="Search by title or recipient"
+                  emptyTitle="No broadcasts found"
+                  emptyDescription="Sent broadcasts will appear here."
+                  showToolbar={false}
+                  footerNote={`Showing ${broadcastRows.length} of ${broadcastHistory.data?.total ?? 0} broadcasts`}
+                />
+              )}
             </CardContent>
           </Card>
 
@@ -782,7 +966,7 @@ export function CommunicationClient() {
                 <div className="grid grid-cols-3 gap-3 border-t pt-4 text-sm">
                   <SummaryMetric label="Total delivered" value="139" className="text-emerald-600" />
                   <SummaryMetric label="Failed" value="3" className="text-red-600" />
-                  <SummaryMetric label="Opt-outs" value="8" className="text-amber-600" />
+                  <SummaryMetric label="Opt-outs" value={totalSuppressions} className="text-amber-600" />
                 </div>
               </CardContent>
             </Card>
@@ -793,16 +977,20 @@ export function CommunicationClient() {
                 <Button variant="outline" size="sm">Export List</Button>
               </CardHeader>
               <CardContent>
-                <LocalTable
-                  data={suppressionList}
-                  columns={suppressionColumns}
-                  searchParams={suppressionSearchParams}
-                  fallbackSortColumn="date"
-                  searchPlaceholder="Search suppressions"
-                  emptyTitle="No suppressions"
-                  emptyDescription="Suppressed recipients will appear here."
-                  showToolbar={false}
-                />
+                {suppressions.isLoading ? (
+                  <TableSkeleton rows={3} />
+                ) : (
+                  <LocalTable
+                    data={suppressionRows}
+                    columns={suppressionColumns}
+                    searchParams={suppressionSearchParams}
+                    fallbackSortColumn="date"
+                    searchPlaceholder="Search suppressions"
+                    emptyTitle="No suppressions"
+                    emptyDescription="Suppressed recipients will appear here."
+                    showToolbar={false}
+                  />
+                )}
               </CardContent>
             </Card>
           </div>
@@ -811,6 +999,58 @@ export function CommunicationClient() {
     </div>
   )
 }
+
+/* ================================================================== */
+/*  Suppression table with remove action                              */
+/* ================================================================== */
+
+function SuppressionTable({
+  data,
+  onRemove,
+}: {
+  data: SuppressionRow[]
+  onRemove: (id: string) => void
+}) {
+  const columns: ColumnDef<SuppressionRow, unknown>[] = useMemo(
+    () => [
+      { accessorKey: "farmer", header: "Farmer", enableHiding: false },
+      {
+        accessorKey: "channel",
+        header: "Channel",
+        cell: ({ row }) => <ChannelBadge value={row.original.channel} />,
+      },
+      { accessorKey: "date", header: "Date" },
+      { accessorKey: "reason", header: "Reason" },
+      {
+        accessorKey: "action",
+        header: "Action",
+        cell: ({ row }) => (
+          <Button variant="outline" size="sm" onClick={() => onRemove(row.original.id)}>
+            {row.original.action}
+          </Button>
+        ),
+      },
+    ],
+    [onRemove],
+  )
+
+  return (
+    <LocalTable
+      data={data}
+      columns={columns}
+      searchParams={suppressionSearchParams}
+      fallbackSortColumn="date"
+      searchPlaceholder="Search suppressions"
+      emptyTitle="No suppressions"
+      emptyDescription="Suppressed recipients will appear here."
+      showToolbar={false}
+    />
+  )
+}
+
+/* ================================================================== */
+/*  LocalTable — reused across multiple sections                      */
+/* ================================================================== */
 
 function LocalTable<TData extends { id: string }>({
   data,
@@ -900,6 +1140,10 @@ function LocalTable<TData extends { id: string }>({
   )
 }
 
+/* ================================================================== */
+/*  Small helper components                                           */
+/* ================================================================== */
+
 function ChannelMetric({ label, summary }: { label: string; summary: string }) {
   return (
     <div className="flex items-center justify-between rounded-xl border px-3 py-3">
@@ -937,7 +1181,11 @@ function SimpleFilterChip({ label }: { label: string }) {
   )
 }
 
-const campaignColumns: ColumnDef<CampaignRow>[] = [
+/* ================================================================== */
+/*  Column definitions                                                 */
+/* ================================================================== */
+
+const smsCampaignColumns: ColumnDef<SmsCampaignRow>[] = [
   {
     accessorKey: "campaign",
     header: "Campaign",
@@ -1008,6 +1256,10 @@ const suppressionColumns: ColumnDef<SuppressionRow>[] = [
   },
 ]
 
+/* ================================================================== */
+/*  Badge helpers                                                      */
+/* ================================================================== */
+
 function ChannelBadge({ value }: { value: BroadcastRow["channel"] | SuppressionRow["channel"] }) {
   if (value === "SMS") return <Badge variant="destructive">{value}</Badge>
   if (value === "Email") return <Badge variant="outline">{value}</Badge>
@@ -1015,7 +1267,7 @@ function ChannelBadge({ value }: { value: BroadcastRow["channel"] | SuppressionR
   return <Badge variant="secondary">{value}</Badge>
 }
 
-function StatusBadge({ value }: { value: CampaignRow["status"] }) {
+function StatusBadge({ value }: { value: SmsCampaignRow["status"] }) {
   if (value === "Sent") return <Badge variant="default">{value}</Badge>
   if (value === "Scheduled") return <Badge variant="secondary">{value}</Badge>
   return <Badge variant="outline">{value}</Badge>
