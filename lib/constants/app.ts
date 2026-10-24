@@ -1,6 +1,6 @@
 export const APP_NAME = "Aqua Prana"
 export const APP_DESCRIPTION = "Admin Dashboard"
-export const APP_LOGO = "/logo.png"
+export const APP_LOGO = "/brand-logo.png"
 
 export type PageMeta = {
   title: string
